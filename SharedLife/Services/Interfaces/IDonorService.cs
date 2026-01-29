@@ -1,4 +1,5 @@
 using SharedLife.Models.DTOs.Donor;
+using SharedLife.Models.DTOs.Recipient;
 using SharedLife.Models.Entities;
 
 namespace SharedLife.Services.Interfaces;
@@ -13,4 +14,6 @@ public interface IDonorService
     Task<(bool Success, string Message, List<DonorListItemDto>? Data)> GetAllDonorsAsync(int page, int pageSize, string? bloodGroup, bool? isAvailable);
     Task<(bool Success, string Message)> RecordBloodDonationAsync(int userId, DateTime donationDate);
     Task<bool> IsDonorAsync(int userId);
+    Task<(bool Success, string Message, List<IncomingDonationRequestDto>? Data)> GetIncomingRequestsAsync(int userId);
+    Task<(bool Success, string Message)> RespondToRequestAsync(int userId, int requestId, bool accept, string? notes);
 }

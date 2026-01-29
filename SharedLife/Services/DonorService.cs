@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SharedLife.Data;
 using SharedLife.Models.DTOs.Donor;
+using SharedLife.Models.DTOs.Recipient;
 using SharedLife.Models.Entities;
 using SharedLife.Models.Enums;
 using SharedLife.Services.Interfaces;
@@ -393,5 +394,207 @@ public class DonorService : IDonorService
             return (true, 0);
 
         return (false, (int)(BloodDonationCooldownDays - daysSinceDonation));
+    }
+
+    /// <summary>
+    /// Get all active donation requests that match the donor's blood type
+    /// </summary>
+    public async Task<(bool Success, string Message, List<IncomingDonationRequestDto>? Data)> GetIncomingRequestsAsync(int userId)
+    {
+        try
+        {
+            // Get donor profile
+            var donor = await _context.Donors
+                .Include(d => d.User)
+                .FirstOrDefaultAsync(d => d.UserId == userId);
+
+            if (donor == null)
+            {
+                return (false, "Donor profile not found", null);
+            }
+
+            // Get compatible blood groups for this donor
+            var compatibleBloodGroups = GetCompatibleRecipientBloodGroups(donor.BloodGroup);
+
+            // Get all active donation requests first (client-side evaluation needed for Contains)
+            var allActiveRequests = await _context.DonationRequests
+                .Include(r => r.Recipient)
+                    .ThenInclude(rec => rec.User)
+                .Where(r => 
+                    r.Status == RequestStatus.Pending || r.Status == RequestStatus.Sent)
+                .ToListAsync();
+
+            // Filter by compatible blood groups in memory (MySQL/Pomelo can't translate Contains on primitive collections)
+            var requests = allActiveRequests
+                .Where(r => compatibleBloodGroups.Contains(r.BloodGroup))
+                .OrderByDescending(r => r.UrgencyLevel)
+                .ThenBy(r => r.RequiredDateTime)
+                .ToList();
+
+            // Check if donor has already responded to any of these
+            var donorResponses = await _context.DonorRequests
+                .Where(dr => dr.DonorId == donor.Id)
+                .ToDictionaryAsync(dr => dr.DonationRequestId, dr => dr);
+
+            var result = requests.Select(r => new IncomingDonationRequestDto
+            {
+                RequestId = r.Id,
+                RecipientName = r.Recipient?.User?.FullName ?? "Anonymous",
+                BloodGroup = r.BloodGroup.ToString(),
+                DonationType = r.DonationType.ToString(),
+                Quantity = r.Quantity,
+                UrgencyLevel = r.UrgencyLevel.ToString(),
+                RequiredDateTime = r.RequiredDateTime,
+                HospitalName = r.HospitalName,
+                HospitalLocation = r.HospitalLocation,
+                City = r.City,
+                ContactName = r.ContactName,
+                ContactPhone = r.ContactPhone,
+                MedicalNotes = r.MedicalNotes,
+                Status = r.Status.ToString(),
+                CreatedAt = r.CreatedAt,
+                DonorResponseStatus = donorResponses.TryGetValue(r.Id, out var response) 
+                    ? response.Status.ToString() 
+                    : null,
+                DonorRespondedAt = donorResponses.TryGetValue(r.Id, out var resp) 
+                    ? resp.RespondedAt 
+                    : null
+            }).ToList();
+
+            return (true, $"Found {result.Count} matching donation requests", result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting incoming requests for user {UserId}", userId);
+            return (false, "An error occurred while retrieving requests", null);
+        }
+    }
+
+    /// <summary>
+    /// Respond to a donation request (accept or decline)
+    /// </summary>
+    public async Task<(bool Success, string Message)> RespondToRequestAsync(int userId, int requestId, bool accept, string? notes)
+    {
+        try
+        {
+            // Get donor profile
+            var donor = await _context.Donors.FirstOrDefaultAsync(d => d.UserId == userId);
+            if (donor == null)
+            {
+                return (false, "Donor profile not found");
+            }
+
+            // Get the donation request
+            var request = await _context.DonationRequests.FindAsync(requestId);
+            if (request == null)
+            {
+                return (false, "Donation request not found");
+            }
+
+            // Check if already responded
+            var existingResponse = await _context.DonorRequests
+                .FirstOrDefaultAsync(dr => dr.DonorId == donor.Id && dr.DonationRequestId == requestId);
+
+            if (existingResponse != null)
+            {
+                // Update existing response
+                existingResponse.Status = accept ? RequestStatus.Accepted : RequestStatus.Cancelled;
+                existingResponse.RespondedAt = DateTime.UtcNow;
+                existingResponse.ResponseNotes = notes;
+            }
+            else
+            {
+                // Create new response
+                var donorRequest = new DonorRequest
+                {
+                    DonationRequestId = requestId,
+                    DonorId = donor.Id,
+                    Status = accept ? RequestStatus.Accepted : RequestStatus.Cancelled,
+                    IsNotified = true,
+                    NotifiedAt = DateTime.UtcNow,
+                    RespondedAt = DateTime.UtcNow,
+                    ResponseNotes = notes,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.DonorRequests.Add(donorRequest);
+            }
+
+            // Update request stats
+            if (accept)
+            {
+                request.AcceptedDonorsCount++;
+            }
+            request.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Donor {DonorId} {Action} request {RequestId}", 
+                donor.Id, accept ? "accepted" : "declined", requestId);
+
+            return (true, accept ? "You have accepted this donation request" : "You have declined this request");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error responding to request {RequestId} by user {UserId}", requestId, userId);
+            return (false, "An error occurred while processing your response");
+        }
+    }
+
+    /// <summary>
+    /// Get blood groups that this donor can donate to
+    /// Based on blood type compatibility
+    /// </summary>
+    private static List<BloodGroup> GetCompatibleRecipientBloodGroups(BloodGroup donorBloodGroup)
+    {
+        return donorBloodGroup switch
+        {
+            // O- can donate to everyone
+            BloodGroup.ONegative => new List<BloodGroup> 
+            { 
+                BloodGroup.APositive, BloodGroup.ANegative,
+                BloodGroup.BPositive, BloodGroup.BNegative,
+                BloodGroup.ABPositive, BloodGroup.ABNegative,
+                BloodGroup.OPositive, BloodGroup.ONegative 
+            },
+            // O+ can donate to A+, B+, AB+, O+
+            BloodGroup.OPositive => new List<BloodGroup> 
+            { 
+                BloodGroup.APositive, BloodGroup.BPositive,
+                BloodGroup.ABPositive, BloodGroup.OPositive 
+            },
+            // A- can donate to A+, A-, AB+, AB-
+            BloodGroup.ANegative => new List<BloodGroup> 
+            { 
+                BloodGroup.APositive, BloodGroup.ANegative,
+                BloodGroup.ABPositive, BloodGroup.ABNegative 
+            },
+            // A+ can donate to A+, AB+
+            BloodGroup.APositive => new List<BloodGroup> 
+            { 
+                BloodGroup.APositive, BloodGroup.ABPositive 
+            },
+            // B- can donate to B+, B-, AB+, AB-
+            BloodGroup.BNegative => new List<BloodGroup> 
+            { 
+                BloodGroup.BPositive, BloodGroup.BNegative,
+                BloodGroup.ABPositive, BloodGroup.ABNegative 
+            },
+            // B+ can donate to B+, AB+
+            BloodGroup.BPositive => new List<BloodGroup> 
+            { 
+                BloodGroup.BPositive, BloodGroup.ABPositive 
+            },
+            // AB- can donate to AB+, AB-
+            BloodGroup.ABNegative => new List<BloodGroup> 
+            { 
+                BloodGroup.ABPositive, BloodGroup.ABNegative 
+            },
+            // AB+ can only donate to AB+
+            BloodGroup.ABPositive => new List<BloodGroup> 
+            { 
+                BloodGroup.ABPositive 
+            },
+            _ => new List<BloodGroup>()
+        };
     }
 }

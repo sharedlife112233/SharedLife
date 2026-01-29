@@ -167,4 +167,46 @@ public class DonorController : ControllerBase
 
         return Ok(ApiResponse<object>.SuccessResponse(null!, message));
     }
+
+    /// <summary>
+    /// Get incoming donation requests that match the donor's blood type
+    /// </summary>
+    [HttpGet("requests/incoming")]
+    [Authorize(Roles = "Donor")]
+    public async Task<ActionResult<ApiResponse<List<Models.DTOs.Recipient.IncomingDonationRequestDto>>>> GetIncomingRequests()
+    {
+        var userId = GetUserId();
+        var (success, message, data) = await _donorService.GetIncomingRequestsAsync(userId);
+
+        if (!success)
+        {
+            return BadRequest(ApiResponse<List<Models.DTOs.Recipient.IncomingDonationRequestDto>>.ErrorResponse(message));
+        }
+
+        return Ok(ApiResponse<List<Models.DTOs.Recipient.IncomingDonationRequestDto>>.SuccessResponse(data!, message));
+    }
+
+    /// <summary>
+    /// Respond to a donation request (accept or decline)
+    /// </summary>
+    [HttpPost("requests/{requestId}/respond")]
+    [Authorize(Roles = "Donor")]
+    public async Task<ActionResult<ApiResponse<object>>> RespondToRequest(int requestId, [FromBody] DonorResponseDto response)
+    {
+        var userId = GetUserId();
+        var (success, message) = await _donorService.RespondToRequestAsync(userId, requestId, response.Accept, response.Notes);
+
+        if (!success)
+        {
+            return BadRequest(ApiResponse<object>.ErrorResponse(message));
+        }
+
+        return Ok(ApiResponse<object>.SuccessResponse(null!, message));
+    }
+}
+
+public class DonorResponseDto
+{
+    public bool Accept { get; set; }
+    public string? Notes { get; set; }
 }

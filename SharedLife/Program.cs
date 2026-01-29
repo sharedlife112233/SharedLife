@@ -104,6 +104,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<JwtHelper>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDonorService, DonorService>();
+builder.Services.AddScoped<IRecipientService, RecipientService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 
 var app = builder.Build();
 
@@ -133,6 +135,10 @@ if (app.Environment.IsDevelopment())
     {
         context.Database.EnsureCreated();
         Console.WriteLine("Database connected and ensured created.");
+        
+        // Seed admin user
+        await DbInitializer.InitializeAsync(app.Services);
+        Console.WriteLine("Database seeding completed.");
     }
     catch (Exception ex)
     {
@@ -141,4 +147,4 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-app.Run();
+await app.RunAsync();

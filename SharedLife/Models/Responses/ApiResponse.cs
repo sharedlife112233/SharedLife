@@ -7,6 +7,33 @@ public class ApiResponse<T>
     public T? Data { get; set; }
     public List<string>? Errors { get; set; }
 
+    // Default constructor
+    public ApiResponse() { }
+
+    // Constructor with success, message
+    public ApiResponse(bool success, string message)
+    {
+        Success = success;
+        Message = message;
+    }
+
+    // Constructor with success, message, data
+    public ApiResponse(bool success, string message, T? data)
+    {
+        Success = success;
+        Message = message;
+        Data = data;
+    }
+
+    // Constructor with success, message, data, errors
+    public ApiResponse(bool success, string message, T? data, List<string>? errors)
+    {
+        Success = success;
+        Message = message;
+        Data = data;
+        Errors = errors;
+    }
+
     public static ApiResponse<T> SuccessResponse(T data, string message = "Success")
     {
         return new ApiResponse<T>
