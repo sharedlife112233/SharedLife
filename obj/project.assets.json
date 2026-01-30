@@ -3592,11 +3592,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/selu/Desktop/SharedLife/SharedLife_Backend/SharedLife/SharedLife/SharedLife.csproj",
+      "projectUniqueName": "/Users/selu/Desktop/SharedLife/SharedLife_Backend/SharedLife.csproj",
       "projectName": "SharedLife",
-      "projectPath": "/Users/selu/Desktop/SharedLife/SharedLife_Backend/SharedLife/SharedLife/SharedLife.csproj",
+      "projectPath": "/Users/selu/Desktop/SharedLife/SharedLife_Backend/SharedLife.csproj",
       "packagesPath": "/Users/selu/.nuget/packages/",
-      "outputPath": "/Users/selu/Desktop/SharedLife/SharedLife_Backend/SharedLife/SharedLife/obj/",
+      "outputPath": "/Users/selu/Desktop/SharedLife/SharedLife_Backend/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/selu/.nuget/NuGet/NuGet.Config"

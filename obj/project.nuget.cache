@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "lUFDVt5u3ew=",
+  "dgSpecHash": "rQU8grWMh4s=",
   "success": true,
-  "projectFilePath": "/Users/selu/Desktop/SharedLife/SharedLife_Backend/SharedLife/SharedLife/SharedLife.csproj",
+  "projectFilePath": "/Users/selu/Desktop/SharedLife/SharedLife_Backend/SharedLife.csproj",
   "expectedPackageFiles": [
     "/Users/selu/.nuget/packages/bcrypt.net-next/4.0.3/bcrypt.net-next.4.0.3.nupkg.sha512",
     "/Users/selu/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
