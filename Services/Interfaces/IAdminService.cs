@@ -23,6 +23,10 @@ public interface IAdminService
     Task<(bool Success, string Message, RecipientListResponseDto? Data)> GetAllRecipientsAsync(int page, int pageSize, string? search, string? bloodGroup);
     Task<(bool Success, string Message)> VerifyRecipientAsync(int recipientId);
     
+    // Hospital Management
+    Task<(bool Success, string Message, HospitalListResponseDto? Data)> GetAllHospitalsAsync(int page, int pageSize, string? search, bool? isVerified);
+    Task<(bool Success, string Message)> VerifyHospitalAsync(int hospitalId, string? notes);
+    
     // Request Management
     Task<(bool Success, string Message, RequestListResponseDto? Data)> GetAllRequestsAsync(int page, int pageSize, string? status, string? urgencyLevel);
     Task<(bool Success, string Message)> UpdateRequestStatusAsync(int requestId, UpdateRequestStatusDto dto);

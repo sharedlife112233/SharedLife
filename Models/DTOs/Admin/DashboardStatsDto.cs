@@ -15,6 +15,11 @@ public class DashboardStatsDto
     public int NewDonorsThisMonth { get; set; }
     public int NewRequestsThisMonth { get; set; }
     
+    // Hospital statistics
+    public int TotalHospitals { get; set; }
+    public int VerifiedHospitals { get; set; }
+    public int PendingHospitalVerifications { get; set; }
+    
     // Blood group distribution
     public Dictionary<string, int> DonorsByBloodGroup { get; set; } = new();
     public Dictionary<string, int> RequestsByBloodGroup { get; set; } = new();

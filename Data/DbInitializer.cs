@@ -15,8 +15,16 @@ public static class DbInitializer
 
         try
         {
-            // Ensure database is created and migrations are applied
-            await context.Database.MigrateAsync();
+            // Try to apply migrations, but handle case where tables already exist
+            try
+            {
+                await context.Database.MigrateAsync();
+            }
+            catch (Exception migrateEx) when (migrateEx.Message.Contains("already exists"))
+            {
+                logger.LogWarning("Some tables already exist, ensuring database is created instead of migrating");
+                await context.Database.EnsureCreatedAsync();
+            }
 
             // Seed admin user
             await SeedAdminUserAsync(context, logger);

@@ -264,4 +264,48 @@ public class AdminController : ControllerBase
     }
 
     #endregion
+
+    #region Hospital Management
+
+    /// <summary>
+    /// Get all hospitals with pagination and filters
+    /// </summary>
+    [HttpGet("hospitals")]
+    public async Task<ActionResult<ApiResponse<HospitalListResponseDto>>> GetAllHospitals(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? search = null,
+        [FromQuery] bool? isVerified = null)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        if (pageSize > 100) pageSize = 100;
+
+        var result = await _adminService.GetAllHospitalsAsync(page, pageSize, search, isVerified);
+        
+        if (!result.Success)
+        {
+            return BadRequest(ApiResponse<HospitalListResponseDto>.ErrorResponse(result.Message));
+        }
+
+        return Ok(ApiResponse<HospitalListResponseDto>.SuccessResponse(result.Data!, result.Message));
+    }
+
+    /// <summary>
+    /// Verify hospital
+    /// </summary>
+    [HttpPost("hospitals/{id}/verify")]
+    public async Task<ActionResult<ApiResponse<object>>> VerifyHospital(int id, [FromBody] VerifyHospitalDto? dto = null)
+    {
+        var result = await _adminService.VerifyHospitalAsync(id, dto?.Notes);
+        
+        if (!result.Success)
+        {
+            return BadRequest(ApiResponse<object>.ErrorResponse(result.Message));
+        }
+
+        return Ok(ApiResponse<object>.SuccessResponse(null!, result.Message));
+    }
+
+    #endregion
 }

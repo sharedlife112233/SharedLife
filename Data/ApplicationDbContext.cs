@@ -14,6 +14,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Donor> Donors { get; set; }
     public DbSet<Recipient> Recipients { get; set; }
+    public DbSet<Hospital> Hospitals { get; set; }
     public DbSet<DonationRequest> DonationRequests { get; set; }
     public DbSet<DonorRequest> DonorRequests { get; set; }
 
@@ -133,6 +134,34 @@ public class ApplicationDbContext : DbContext
             
             // Ensure a donor can only respond once to a request
             entity.HasIndex(e => new { e.DonationRequestId, e.DonorId }).IsUnique();
+        });
+
+        // Hospital configuration
+        modelBuilder.Entity<Hospital>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UserId).IsUnique();
+            entity.HasIndex(e => e.RegistrationNumber).IsUnique();
+            entity.Property(e => e.HospitalName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.RegistrationNumber).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.HospitalType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Address).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.City).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.State).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.PinCode).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.ContactPersonName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.ContactPersonDesignation).HasMaxLength(100);
+            entity.Property(e => e.ContactEmail).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.ContactPhone).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.AlternatePhone).HasMaxLength(20);
+            entity.Property(e => e.Website).HasMaxLength(200);
+            entity.Property(e => e.OperatingHours).HasMaxLength(200);
+            entity.Property(e => e.VerificationNotes).HasMaxLength(500);
+            
+            entity.HasOne(e => e.User)
+                .WithOne()
+                .HasForeignKey<Hospital>(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

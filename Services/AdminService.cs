@@ -54,6 +54,11 @@ public class AdminService : IAdminService
                 NewUsersThisMonth = await _context.Users.CountAsync(u => u.CreatedAt >= startOfMonth),
                 NewDonorsThisMonth = await _context.Donors.CountAsync(d => d.CreatedAt >= startOfMonth),
                 NewRequestsThisMonth = await _context.DonationRequests.CountAsync(r => r.CreatedAt >= startOfMonth),
+                
+                // Hospital statistics
+                TotalHospitals = await _context.Hospitals.CountAsync(),
+                VerifiedHospitals = await _context.Hospitals.CountAsync(h => h.IsVerified),
+                PendingHospitalVerifications = await _context.Hospitals.CountAsync(h => !h.IsVerified),
             };
 
             // Blood group distribution for donors
@@ -695,6 +700,120 @@ public class AdminService : IAdminService
         {
             _logger.LogError(ex, "Error updating request {RequestId} status", requestId);
             return (false, "Failed to update request status");
+        }
+    }
+
+    #endregion
+
+    #region Hospital Management
+
+    public async Task<(bool Success, string Message, HospitalListResponseDto? Data)> GetAllHospitalsAsync(int page, int pageSize, string? search, bool? isVerified)
+    {
+        try
+        {
+            var query = _context.Hospitals
+                .Include(h => h.User)
+                .AsQueryable();
+
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = search.ToLower();
+                query = query.Where(h =>
+                    h.HospitalName.ToLower().Contains(search) ||
+                    h.RegistrationNumber.ToLower().Contains(search) ||
+                    h.City.ToLower().Contains(search) ||
+                    h.ContactPersonName.ToLower().Contains(search) ||
+                    h.ContactEmail.ToLower().Contains(search));
+            }
+
+            // Apply verified filter
+            if (isVerified.HasValue)
+            {
+                query = query.Where(h => h.IsVerified == isVerified.Value);
+            }
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            var hospitals = await query
+                .OrderByDescending(h => h.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(h => new HospitalListDto
+                {
+                    Id = h.Id,
+                    UserId = h.UserId,
+                    HospitalName = h.HospitalName,
+                    RegistrationNumber = h.RegistrationNumber,
+                    HospitalType = h.HospitalType,
+                    ContactPersonName = h.ContactPersonName,
+                    ContactEmail = h.ContactEmail,
+                    ContactPhone = h.ContactPhone,
+                    City = h.City,
+                    State = h.State,
+                    Address = h.Address,
+                    HasBloodBank = h.HasBloodBank,
+                    HasOrganTransplant = h.HasOrganTransplant,
+                    HasEyeBank = h.HasEyeBank,
+                    HasBoneMarrowRegistry = h.HasBoneMarrowRegistry,
+                    IsVerified = h.IsVerified,
+                    IsActive = h.IsActive,
+                    VerifiedAt = h.VerifiedAt,
+                    VerifiedByAdminId = h.VerifiedByAdminId,
+                    VerificationNotes = h.VerificationNotes,
+                    TotalDonorsVerified = h.TotalDonorsVerified,
+                    TotalRequestsProcessed = h.TotalRequestsProcessed,
+                    CreatedAt = h.CreatedAt,
+                    UpdatedAt = h.UpdatedAt
+                })
+                .ToListAsync();
+
+            return (true, "Hospitals retrieved successfully", new HospitalListResponseDto
+            {
+                Hospitals = hospitals,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize,
+                TotalPages = totalPages
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting hospitals");
+            return (false, "Failed to retrieve hospitals", null);
+        }
+    }
+
+    public async Task<(bool Success, string Message)> VerifyHospitalAsync(int hospitalId, string? notes)
+    {
+        try
+        {
+            var hospital = await _context.Hospitals.FirstOrDefaultAsync(h => h.Id == hospitalId);
+            if (hospital == null)
+            {
+                return (false, "Hospital not found");
+            }
+
+            if (hospital.IsVerified)
+            {
+                return (false, "Hospital is already verified");
+            }
+
+            hospital.IsVerified = true;
+            hospital.VerifiedAt = DateTime.UtcNow;
+            hospital.VerificationNotes = notes;
+            hospital.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Admin verified hospital {HospitalId}", hospitalId);
+            return (true, "Hospital verified successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error verifying hospital {HospitalId}", hospitalId);
+            return (false, "Failed to verify hospital");
         }
     }
 
