@@ -19,12 +19,6 @@ public class HospitalUpdateDto
     [MaxLength(10)]
     public string? PinCode { get; set; }
     
-    [MaxLength(100)]
-    public string? ContactPersonName { get; set; }
-    
-    [MaxLength(100)]
-    public string? ContactPersonDesignation { get; set; }
-    
     [EmailAddress]
     [MaxLength(255)]
     public string? ContactEmail { get; set; }

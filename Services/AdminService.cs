@@ -5,6 +5,7 @@ using SharedLife.Models.DTOs.Admin;
 using SharedLife.Models.Entities;
 using SharedLife.Models.Enums;
 using SharedLife.Services.Interfaces;
+using SharedLife.Utilities;
 
 namespace SharedLife.Services;
 
@@ -37,7 +38,7 @@ public class AdminService : IAdminService
     {
         try
         {
-            var now = DateTime.UtcNow;
+            var now = TimeHelper.Now;
             var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
             var stats = new DashboardStatsDto
@@ -301,7 +302,7 @@ public class AdminService : IAdminService
             if (dto.IsVerified.HasValue)
                 user.IsVerified = dto.IsVerified.Value;
 
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = TimeHelper.Now;
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Admin updated user {UserId}", userId);
@@ -332,7 +333,7 @@ public class AdminService : IAdminService
 
             // Soft delete - set IsActive to false
             user.IsActive = false;
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = TimeHelper.Now;
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Admin soft-deleted user {UserId}", userId);
@@ -356,7 +357,7 @@ public class AdminService : IAdminService
             }
 
             user.IsVerified = true;
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = TimeHelper.Now;
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Admin verified user {UserId}", userId);
@@ -464,9 +465,9 @@ public class AdminService : IAdminService
                 return (false, "Donor not found");
             }
 
-            donor.VerifiedAt = DateTime.UtcNow;
+            donor.VerifiedAt = TimeHelper.Now;
             donor.Status = DonorStatus.Active;
-            donor.UpdatedAt = DateTime.UtcNow;
+            donor.UpdatedAt = TimeHelper.Now;
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Admin verified donor {DonorId}", donorId);
@@ -543,8 +544,6 @@ public class AdminService : IAdminService
                     MedicalCondition = r.MedicalCondition,
                     HospitalName = r.HospitalName,
                     City = r.City,
-                    DoctorName = r.DoctorName,
-                    DoctorContact = r.DoctorContact,
                     IsVerified = r.IsVerified,
                     CreatedAt = r.CreatedAt,
                     VerifiedAt = r.VerifiedAt,
@@ -581,8 +580,8 @@ public class AdminService : IAdminService
             }
 
             recipient.IsVerified = true;
-            recipient.VerifiedAt = DateTime.UtcNow;
-            recipient.UpdatedAt = DateTime.UtcNow;
+            recipient.VerifiedAt = TimeHelper.Now;
+            recipient.UpdatedAt = TimeHelper.Now;
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Admin verified recipient {RecipientId}", recipientId);
@@ -684,11 +683,11 @@ public class AdminService : IAdminService
             }
 
             request.Status = newStatus;
-            request.UpdatedAt = DateTime.UtcNow;
+            request.UpdatedAt = TimeHelper.Now;
             
             if (newStatus == RequestStatus.Completed)
             {
-                request.CompletedAt = DateTime.UtcNow;
+                request.CompletedAt = TimeHelper.Now;
             }
 
             await _context.SaveChangesAsync();
@@ -723,7 +722,6 @@ public class AdminService : IAdminService
                     h.HospitalName.ToLower().Contains(search) ||
                     h.RegistrationNumber.ToLower().Contains(search) ||
                     h.City.ToLower().Contains(search) ||
-                    h.ContactPersonName.ToLower().Contains(search) ||
                     h.ContactEmail.ToLower().Contains(search));
             }
 
@@ -747,7 +745,6 @@ public class AdminService : IAdminService
                     HospitalName = h.HospitalName,
                     RegistrationNumber = h.RegistrationNumber,
                     HospitalType = h.HospitalType,
-                    ContactPersonName = h.ContactPersonName,
                     ContactEmail = h.ContactEmail,
                     ContactPhone = h.ContactPhone,
                     City = h.City,
@@ -801,9 +798,9 @@ public class AdminService : IAdminService
             }
 
             hospital.IsVerified = true;
-            hospital.VerifiedAt = DateTime.UtcNow;
+            hospital.VerifiedAt = TimeHelper.Now;
             hospital.VerificationNotes = notes;
-            hospital.UpdatedAt = DateTime.UtcNow;
+            hospital.UpdatedAt = TimeHelper.Now;
 
             await _context.SaveChangesAsync();
 

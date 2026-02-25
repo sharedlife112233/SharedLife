@@ -24,10 +24,6 @@ public class RecipientProfileDto
     public string? HospitalAddress { get; set; }
     public string? City { get; set; }
     
-    // Doctor Info
-    public string? DoctorName { get; set; }
-    public string? DoctorContact { get; set; }
-    
     // Emergency Contact
     public string? EmergencyContactName { get; set; }
     public string? EmergencyContactPhone { get; set; }

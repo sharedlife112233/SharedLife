@@ -19,12 +19,6 @@ public class RecipientRegistrationDto
     [StringLength(100, ErrorMessage = "City cannot exceed 100 characters")]
     public string? City { get; set; }
     
-    [StringLength(100, ErrorMessage = "Doctor name cannot exceed 100 characters")]
-    public string? DoctorName { get; set; }
-    
-    [Phone(ErrorMessage = "Invalid phone number format")]
-    public string? DoctorContact { get; set; }
-    
     [Required(ErrorMessage = "Emergency contact name is required")]
     [StringLength(100, ErrorMessage = "Emergency contact name cannot exceed 100 characters")]
     public string EmergencyContactName { get; set; } = string.Empty;

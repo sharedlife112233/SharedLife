@@ -4,6 +4,7 @@ using SharedLife.Models.DTOs.Recipient;
 using SharedLife.Models.Entities;
 using SharedLife.Models.Enums;
 using SharedLife.Services.Interfaces;
+using SharedLife.Utilities;
 
 namespace SharedLife.Services;
 
@@ -65,12 +66,10 @@ public class RecipientService : IRecipientService
                 HospitalName = request.HospitalName,
                 HospitalAddress = request.HospitalAddress,
                 City = request.City,
-                DoctorName = request.DoctorName,
-                DoctorContact = request.DoctorContact,
                 EmergencyContactName = request.EmergencyContactName,
                 EmergencyContactPhone = request.EmergencyContactPhone,
                 EmergencyContactRelation = request.EmergencyContactRelation,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = TimeHelper.Now
             };
 
             _context.Recipients.Add(recipient);
@@ -129,12 +128,10 @@ public class RecipientService : IRecipientService
             recipient.HospitalName = request.HospitalName;
             recipient.HospitalAddress = request.HospitalAddress;
             recipient.City = request.City;
-            recipient.DoctorName = request.DoctorName;
-            recipient.DoctorContact = request.DoctorContact;
             recipient.EmergencyContactName = request.EmergencyContactName;
             recipient.EmergencyContactPhone = request.EmergencyContactPhone;
             recipient.EmergencyContactRelation = request.EmergencyContactRelation;
-            recipient.UpdatedAt = DateTime.UtcNow;
+            recipient.UpdatedAt = TimeHelper.Now;
 
             await _context.SaveChangesAsync();
 
@@ -179,12 +176,10 @@ public class RecipientService : IRecipientService
                 City = request.City,
                 ContactName = request.ContactName,
                 ContactPhone = request.ContactPhone,
-                DoctorName = request.DoctorName,
-                DoctorContact = request.DoctorContact,
                 MedicalNotes = request.MedicalNotes,
                 AdditionalRequirements = request.AdditionalRequirements,
                 Status = RequestStatus.Pending,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = TimeHelper.Now
             };
 
             _context.DonationRequests.Add(donationRequest);
@@ -284,7 +279,7 @@ public class RecipientService : IRecipientService
             }
 
             request.Status = RequestStatus.Cancelled;
-            request.UpdatedAt = DateTime.UtcNow;
+            request.UpdatedAt = TimeHelper.Now;
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Donation request {RequestId} cancelled by user {UserId}", requestId, userId);
@@ -319,11 +314,11 @@ public class RecipientService : IRecipientService
             }
 
             request.Status = status;
-            request.UpdatedAt = DateTime.UtcNow;
+            request.UpdatedAt = TimeHelper.Now;
             
             if (status == RequestStatus.Completed)
             {
-                request.CompletedAt = DateTime.UtcNow;
+                request.CompletedAt = TimeHelper.Now;
             }
 
             await _context.SaveChangesAsync();
@@ -454,8 +449,8 @@ public class RecipientService : IRecipientService
                     DonorId = d.DonorId,
                     Status = RequestStatus.Sent,
                     IsNotified = true,
-                    NotifiedAt = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow
+                    NotifiedAt = TimeHelper.Now,
+                    CreatedAt = TimeHelper.Now
                 }).ToList();
 
             if (newDonorRequests.Any())
@@ -464,7 +459,7 @@ public class RecipientService : IRecipientService
                 
                 request.Status = RequestStatus.Sent;
                 request.MatchedDonorsCount = donors.Count;
-                request.UpdatedAt = DateTime.UtcNow;
+                request.UpdatedAt = TimeHelper.Now;
                 
                 await _context.SaveChangesAsync();
             }
@@ -550,8 +545,6 @@ public class RecipientService : IRecipientService
             HospitalName = recipient.HospitalName,
             HospitalAddress = recipient.HospitalAddress,
             City = recipient.City,
-            DoctorName = recipient.DoctorName,
-            DoctorContact = recipient.DoctorContact,
             EmergencyContactName = recipient.EmergencyContactName,
             EmergencyContactPhone = recipient.EmergencyContactPhone,
             EmergencyContactRelation = recipient.EmergencyContactRelation,
@@ -585,8 +578,6 @@ public class RecipientService : IRecipientService
             City = request.City,
             ContactName = request.ContactName,
             ContactPhone = request.ContactPhone,
-            DoctorName = request.DoctorName,
-            DoctorContact = request.DoctorContact,
             MedicalNotes = request.MedicalNotes,
             AdditionalRequirements = request.AdditionalRequirements,
             Status = request.Status,
@@ -665,13 +656,13 @@ public class RecipientService : IRecipientService
     private static bool CanDonateBlood(DateTime? lastDonation)
     {
         if (!lastDonation.HasValue) return true;
-        return (DateTime.UtcNow - lastDonation.Value).TotalDays >= 56; // 8 weeks
+        return (TimeHelper.Now - lastDonation.Value).TotalDays >= 56; // 8 weeks
     }
 
     private static int? CalculateDaysUntilCanDonate(DateTime? lastDonation)
     {
         if (!lastDonation.HasValue) return 0;
-        var daysSince = (DateTime.UtcNow - lastDonation.Value).TotalDays;
+        var daysSince = (TimeHelper.Now - lastDonation.Value).TotalDays;
         var daysRemaining = 56 - (int)daysSince;
         return daysRemaining > 0 ? daysRemaining : 0;
     }

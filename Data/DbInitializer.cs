@@ -61,8 +61,8 @@ public static class DbInitializer
             Role = UserRole.Admin,
             IsActive = true,
             IsVerified = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = TimeHelper.Now,
+            UpdatedAt = TimeHelper.Now
         };
 
         context.Users.Add(adminUser);

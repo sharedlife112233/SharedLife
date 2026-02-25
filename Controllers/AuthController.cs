@@ -45,7 +45,13 @@ public class AuthController : ControllerBase
             return BadRequest(ApiResponse<LoginResponseDto>.ErrorResponse(message));
         }
 
-        return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(data!, message));
+        // Hospital registration returns success but no login data (pending approval)
+        if (data == null)
+        {
+            return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(null!, message));
+        }
+
+        return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(data, message));
     }
 
     /// <summary>

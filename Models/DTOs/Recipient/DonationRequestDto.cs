@@ -26,8 +26,6 @@ public class DonationRequestDto
     // Contact Info
     public string ContactName { get; set; } = string.Empty;
     public string ContactPhone { get; set; } = string.Empty;
-    public string? DoctorName { get; set; }
-    public string? DoctorContact { get; set; }
     
     // Additional Info
     public string? MedicalNotes { get; set; }

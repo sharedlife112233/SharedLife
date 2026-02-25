@@ -1,4 +1,5 @@
 using SharedLife.Models.Enums;
+using SharedLife.Utilities;
 
 namespace SharedLife.Models.Entities;
 
@@ -25,8 +26,6 @@ public class DonationRequest
     // Contact Details
     public string ContactName { get; set; } = string.Empty;
     public string ContactPhone { get; set; } = string.Empty;
-    public string? DoctorName { get; set; }
-    public string? DoctorContact { get; set; }
     
     // Additional Information
     public string? MedicalNotes { get; set; }
@@ -38,7 +37,7 @@ public class DonationRequest
     public int AcceptedDonorsCount { get; set; } = 0;
     
     // Timestamps
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = TimeHelper.Now;
     public DateTime? UpdatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     

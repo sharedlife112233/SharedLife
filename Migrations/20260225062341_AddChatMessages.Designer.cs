@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SharedLife.Data;
 
@@ -11,9 +12,11 @@ using SharedLife.Data;
 namespace SharedLife.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260225062341_AddChatMessages")]
+    partial class AddChatMessages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -100,6 +103,14 @@ namespace SharedLife.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DoctorContact")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("DoctorName")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<string>("DonationType")
                         .IsRequired()
@@ -339,6 +350,16 @@ namespace SharedLife.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
+                    b.Property<string>("ContactPersonDesignation")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("ContactPersonName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
                     b.Property<string>("ContactPhone")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -452,6 +473,14 @@ namespace SharedLife.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DoctorContact")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("DoctorName")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<string>("EmergencyContactName")
                         .HasMaxLength(100)

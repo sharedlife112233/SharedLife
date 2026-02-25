@@ -1,4 +1,5 @@
 using SharedLife.Models.Enums;
+using SharedLife.Utilities;
 
 namespace SharedLife.Models.Entities;
 
@@ -53,6 +54,6 @@ public class Donor
     public DateTime? VerifiedAt { get; set; }
     
     // Timestamps
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = TimeHelper.Now;
     public DateTime? UpdatedAt { get; set; }
 }

@@ -41,12 +41,6 @@ public class CreateDonationRequestDto
     [Phone(ErrorMessage = "Invalid phone number format")]
     public string ContactPhone { get; set; } = string.Empty;
     
-    [StringLength(100, ErrorMessage = "Doctor name cannot exceed 100 characters")]
-    public string? DoctorName { get; set; }
-    
-    [Phone(ErrorMessage = "Invalid phone number format")]
-    public string? DoctorContact { get; set; }
-    
     [StringLength(1000, ErrorMessage = "Medical notes cannot exceed 1000 characters")]
     public string? MedicalNotes { get; set; }
     

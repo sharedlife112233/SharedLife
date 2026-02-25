@@ -1,4 +1,5 @@
 using SharedLife.Models.Enums;
+using SharedLife.Utilities;
 
 namespace SharedLife.Models.Entities;
 
@@ -25,5 +26,5 @@ public class DonorRequest
     public string? ResponseNotes { get; set; }
     
     // Timestamps
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = TimeHelper.Now;
 }

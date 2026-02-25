@@ -28,10 +28,18 @@ public class RegisterRequestDto
     [Required(ErrorMessage = "Role is required")]
     public UserRole Role { get; set; }
 
+    // Optional for all roles, required for Donor/Recipient
     public BloodGroup? BloodGroup { get; set; }
 
     public string? Address { get; set; }
 
-    [Required(ErrorMessage = "Date of birth is required")]
-    public DateTime DateOfBirth { get; set; }
+    // Optional - not required for Hospital role
+    public DateTime? DateOfBirth { get; set; }
+
+    // Hospital-specific fields
+    public string? HospitalName { get; set; }
+    public string? RegistrationNumber { get; set; }
+    public string? HospitalType { get; set; } // Government, Private, NGO
+    public string? City { get; set; }
+    public string? State { get; set; }
 }

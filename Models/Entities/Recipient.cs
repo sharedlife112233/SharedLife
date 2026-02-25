@@ -1,4 +1,5 @@
 using SharedLife.Models.Enums;
+using SharedLife.Utilities;
 
 namespace SharedLife.Models.Entities;
 
@@ -17,10 +18,6 @@ public class Recipient
     public string? HospitalAddress { get; set; }
     public string? City { get; set; }
     
-    // Doctor Information
-    public string? DoctorName { get; set; }
-    public string? DoctorContact { get; set; }
-    
     // Emergency Contact
     public string? EmergencyContactName { get; set; }
     public string? EmergencyContactPhone { get; set; }
@@ -31,7 +28,7 @@ public class Recipient
     public DateTime? VerifiedAt { get; set; }
     
     // Timestamps
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = TimeHelper.Now;
     public DateTime? UpdatedAt { get; set; }
     
     // Navigation properties

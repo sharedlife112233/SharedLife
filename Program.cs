@@ -107,6 +107,7 @@ builder.Services.AddScoped<IDonorService, DonorService>();
 builder.Services.AddScoped<IRecipientService, RecipientService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IHospitalService, HospitalService>();
+builder.Services.AddScoped<IChatService, ChatService>();
 
 var app = builder.Build();
 

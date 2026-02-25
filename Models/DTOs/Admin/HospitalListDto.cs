@@ -7,7 +7,6 @@ public class HospitalListDto
     public string HospitalName { get; set; } = string.Empty;
     public string RegistrationNumber { get; set; } = string.Empty;
     public string HospitalType { get; set; } = string.Empty;
-    public string ContactPersonName { get; set; } = string.Empty;
     public string ContactEmail { get; set; } = string.Empty;
     public string ContactPhone { get; set; } = string.Empty;
     public string City { get; set; } = string.Empty;

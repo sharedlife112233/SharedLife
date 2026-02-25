@@ -33,26 +33,73 @@ public class AuthService : IAuthService
                 return (false, "Email is already registered", null);
             }
 
+            // Validate role-specific fields
+            if (request.Role == Models.Enums.UserRole.Hospital)
+            {
+                if (string.IsNullOrWhiteSpace(request.HospitalName))
+                    return (false, "Hospital name is required", null);
+                if (string.IsNullOrWhiteSpace(request.RegistrationNumber))
+                    return (false, "Hospital registration number is required", null);
+                if (string.IsNullOrWhiteSpace(request.HospitalType))
+                    return (false, "Hospital type is required", null);
+            }
+            else
+            {
+                // For Donor/Recipient, date of birth is required
+                if (!request.DateOfBirth.HasValue)
+                    return (false, "Date of birth is required", null);
+            }
+
             // Create new user
             var user = new User
             {
                 Email = request.Email.ToLower().Trim(),
                 PasswordHash = PasswordHasher.HashPassword(request.Password),
-                FullName = request.FullName.Trim(),
+                FullName = request.Role == Models.Enums.UserRole.Hospital 
+                    ? request.HospitalName!.Trim() 
+                    : request.FullName.Trim(),
                 PhoneNumber = request.PhoneNumber.Trim(),
                 Role = request.Role,
                 BloodGroup = request.BloodGroup,
                 Address = request.Address?.Trim(),
-                DateOfBirth = request.DateOfBirth,
+                DateOfBirth = request.DateOfBirth ?? TimeHelper.Now, // Default for hospitals
                 IsActive = true,
                 IsVerified = false,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = TimeHelper.Now
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            // Generate tokens
+            // If registering as Hospital, create the Hospital profile automatically
+            if (request.Role == Models.Enums.UserRole.Hospital)
+            {
+                var hospital = new Hospital
+                {
+                    UserId = user.Id,
+                    HospitalName = request.HospitalName!.Trim(),
+                    RegistrationNumber = request.RegistrationNumber!.Trim(),
+                    HospitalType = request.HospitalType!.Trim(),
+                    Address = request.Address?.Trim() ?? string.Empty,
+                    City = request.City?.Trim() ?? string.Empty,
+                    State = request.State?.Trim() ?? string.Empty,
+                    PinCode = string.Empty,
+                    ContactEmail = request.Email.ToLower().Trim(),
+                    ContactPhone = request.PhoneNumber.Trim(),
+                    IsVerified = false,
+                    IsActive = true,
+                    CreatedAt = TimeHelper.Now
+                };
+
+                _context.Hospitals.Add(hospital);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Hospital profile created for user: {Email}", user.Email);
+
+                // Hospitals must wait for admin approval before logging in
+                return (true, "Registration successful! Your hospital account is pending admin approval. You will be able to log in once an admin verifies your hospital.", null);
+            }
+
+            // Generate tokens (for non-hospital users)
             var token = _jwtHelper.GenerateJwtToken(user);
             var refreshToken = await CreateRefreshTokenAsync(user.Id);
 
@@ -97,6 +144,16 @@ public class AuthService : IAuthService
             if (!PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
             {
                 return (false, "Invalid email or password", null);
+            }
+
+            // Check if hospital is verified before allowing login
+            if (user.Role == Models.Enums.UserRole.Hospital)
+            {
+                var hospital = await _context.Hospitals.FirstOrDefaultAsync(h => h.UserId == user.Id);
+                if (hospital == null || !hospital.IsVerified)
+                {
+                    return (false, "Your hospital account is pending admin approval. Please wait for verification before logging in.", null);
+                }
             }
 
             // Generate tokens
@@ -172,7 +229,7 @@ public class AuthService : IAuthService
             }
 
             // Revoke old token
-            token.RevokedAt = DateTime.UtcNow;
+            token.RevokedAt = TimeHelper.Now;
 
             // Generate new tokens
             var newJwtToken = _jwtHelper.GenerateJwtToken(token.User);
@@ -212,7 +269,7 @@ public class AuthService : IAuthService
                 return false;
             }
 
-            token.RevokedAt = DateTime.UtcNow;
+            token.RevokedAt = TimeHelper.Now;
             await _context.SaveChangesAsync();
 
             return true;
@@ -235,8 +292,8 @@ public class AuthService : IAuthService
         {
             Token = _jwtHelper.GenerateRefreshToken(),
             UserId = userId,
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
-            CreatedAt = DateTime.UtcNow
+            ExpiresAt = TimeHelper.Now.AddDays(7),
+            CreatedAt = TimeHelper.Now
         };
 
         _context.RefreshTokens.Add(refreshToken);

@@ -12,8 +12,6 @@ public class RecipientListDto
     public string? MedicalCondition { get; set; }
     public string? HospitalName { get; set; }
     public string? City { get; set; }
-    public string? DoctorName { get; set; }
-    public string? DoctorContact { get; set; }
     public bool IsVerified { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? VerifiedAt { get; set; }

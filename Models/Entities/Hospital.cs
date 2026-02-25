@@ -1,4 +1,5 @@
 using SharedLife.Models.Enums;
+using SharedLife.Utilities;
 
 namespace SharedLife.Models.Entities;
 
@@ -20,8 +21,6 @@ public class Hospital
     public string PinCode { get; set; } = string.Empty;
     
     // Contact Information
-    public string ContactPersonName { get; set; } = string.Empty;
-    public string ContactPersonDesignation { get; set; } = string.Empty;
     public string ContactEmail { get; set; } = string.Empty;
     public string ContactPhone { get; set; } = string.Empty;
     public string? AlternatePhone { get; set; }
@@ -51,7 +50,7 @@ public class Hospital
     public bool IsActive { get; set; } = true;
     
     // Timestamps
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = TimeHelper.Now;
     public DateTime? UpdatedAt { get; set; }
     
     // Statistics (computed/cached)

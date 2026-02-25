@@ -33,13 +33,6 @@ public class HospitalRegistrationDto
     public string PinCode { get; set; } = string.Empty;
     
     [Required]
-    [MaxLength(100)]
-    public string ContactPersonName { get; set; } = string.Empty;
-    
-    [MaxLength(100)]
-    public string? ContactPersonDesignation { get; set; }
-    
-    [Required]
     [EmailAddress]
     [MaxLength(255)]
     public string ContactEmail { get; set; } = string.Empty;

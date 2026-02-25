@@ -26,4 +26,7 @@ public class IncomingDonationRequestDto
     // Donor's response status to this request (if any)
     public string? DonorResponseStatus { get; set; }
     public DateTime? DonorRespondedAt { get; set; }
+    
+    // DonorRequest ID for chat functionality (only available when donor has responded)
+    public int? DonorRequestId { get; set; }
 }

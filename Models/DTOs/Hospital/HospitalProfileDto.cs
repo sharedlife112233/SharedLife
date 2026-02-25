@@ -20,8 +20,6 @@ public class HospitalProfileDto
     public string PinCode { get; set; } = string.Empty;
     
     // Contact Information
-    public string ContactPersonName { get; set; } = string.Empty;
-    public string? ContactPersonDesignation { get; set; }
     public string ContactEmail { get; set; } = string.Empty;
     public string ContactPhone { get; set; } = string.Empty;
     public string? AlternatePhone { get; set; }

@@ -41,7 +41,7 @@ public class JwtHelper
             issuer: issuer,
             audience: audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
+            expires: TimeHelper.Now.AddMinutes(expirationMinutes),
             signingCredentials: credentials
         );
 
@@ -105,6 +105,6 @@ public class JwtHelper
     public DateTime GetTokenExpiration()
     {
         var expirationMinutes = int.Parse(_configuration["JwtSettings:ExpirationMinutes"] ?? "1440");
-        return DateTime.UtcNow.AddMinutes(expirationMinutes);
+        return TimeHelper.Now.AddMinutes(expirationMinutes);
     }
 }

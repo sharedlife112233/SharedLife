@@ -5,6 +5,7 @@ using SharedLife.Models.DTOs.Recipient;
 using SharedLife.Models.Entities;
 using SharedLife.Models.Enums;
 using SharedLife.Services.Interfaces;
+using SharedLife.Utilities;
 
 namespace SharedLife.Services;
 
@@ -68,14 +69,14 @@ public class DonorService : IDonorService
                 EmergencyContactRelation = request.EmergencyContactRelation,
                 Status = DonorStatus.Pending,
                 IsAvailable = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = TimeHelper.Now
             };
 
             // Update user's blood group if not set
             if (user.BloodGroup == null)
             {
                 user.BloodGroup = request.BloodGroup;
-                user.UpdatedAt = DateTime.UtcNow;
+                user.UpdatedAt = TimeHelper.Now;
             }
 
             _context.Donors.Add(donor);
@@ -173,7 +174,7 @@ public class DonorService : IDonorService
             donor.EmergencyContactName = request.EmergencyContactName;
             donor.EmergencyContactPhone = request.EmergencyContactPhone;
             donor.EmergencyContactRelation = request.EmergencyContactRelation;
-            donor.UpdatedAt = DateTime.UtcNow;
+            donor.UpdatedAt = TimeHelper.Now;
 
             await _context.SaveChangesAsync();
 
@@ -202,7 +203,7 @@ public class DonorService : IDonorService
 
             donor.IsAvailable = request.IsAvailable;
             donor.AvailabilityNotes = request.AvailabilityNotes;
-            donor.UpdatedAt = DateTime.UtcNow;
+            donor.UpdatedAt = TimeHelper.Now;
 
             await _context.SaveChangesAsync();
 
@@ -280,7 +281,7 @@ public class DonorService : IDonorService
 
             donor.LastBloodDonationDate = donationDate;
             donor.TotalBloodDonations += 1;
-            donor.UpdatedAt = DateTime.UtcNow;
+            donor.UpdatedAt = TimeHelper.Now;
 
             await _context.SaveChangesAsync();
 
@@ -380,7 +381,7 @@ public class DonorService : IDonorService
         if (!lastDonationDate.HasValue)
             return true;
 
-        return (DateTime.UtcNow - lastDonationDate.Value).TotalDays >= BloodDonationCooldownDays;
+        return (TimeHelper.Now - lastDonationDate.Value).TotalDays >= BloodDonationCooldownDays;
     }
 
     private static (bool CanDonate, int DaysUntil) CalculateBloodDonationEligibility(DateTime? lastDonationDate)
@@ -388,7 +389,7 @@ public class DonorService : IDonorService
         if (!lastDonationDate.HasValue)
             return (true, 0);
 
-        var daysSinceDonation = (DateTime.UtcNow - lastDonationDate.Value).TotalDays;
+        var daysSinceDonation = (TimeHelper.Now - lastDonationDate.Value).TotalDays;
         
         if (daysSinceDonation >= BloodDonationCooldownDays)
             return (true, 0);
@@ -413,8 +414,15 @@ public class DonorService : IDonorService
                 return (false, "Donor profile not found", null);
             }
 
-            // Get compatible blood groups for this donor
+            // Log donor's blood group for debugging
+            _logger.LogInformation("Donor {UserId} has blood group {BloodGroup} (value: {BloodGroupValue})", 
+                userId, donor.BloodGroup.ToString(), (int)donor.BloodGroup);
+
+            // Get compatible blood groups for this donor (recipients who can receive from this donor)
             var compatibleBloodGroups = GetCompatibleRecipientBloodGroups(donor.BloodGroup);
+            
+            _logger.LogInformation("Compatible recipient blood groups for donor: {Groups}", 
+                string.Join(", ", compatibleBloodGroups.Select(bg => $"{bg}({(int)bg})")));
 
             // Get all active donation requests first (client-side evaluation needed for Contains)
             var allActiveRequests = await _context.DonationRequests
@@ -424,12 +432,27 @@ public class DonorService : IDonorService
                     r.Status == RequestStatus.Pending || r.Status == RequestStatus.Sent)
                 .ToListAsync();
 
+            _logger.LogInformation("Found {Count} active donation requests before filtering", allActiveRequests.Count);
+            
+            // Log all request blood groups for debugging
+            foreach (var req in allActiveRequests)
+            {
+                _logger.LogInformation("Request {Id}: BloodGroup={BloodGroup} (value: {Value}), IsMatch={IsMatch}", 
+                    req.Id, req.BloodGroup.ToString(), (int)req.BloodGroup, 
+                    compatibleBloodGroups.Contains(req.BloodGroup));
+            }
+
             // Filter by compatible blood groups in memory (MySQL/Pomelo can't translate Contains on primitive collections)
+            // Create a set of compatible blood group integer values for faster lookup
+            var compatibleBloodGroupValues = new HashSet<int>(compatibleBloodGroups.Select(bg => (int)bg));
+
             var requests = allActiveRequests
-                .Where(r => compatibleBloodGroups.Contains(r.BloodGroup))
+                .Where(r => compatibleBloodGroupValues.Contains((int)r.BloodGroup))
                 .OrderByDescending(r => r.UrgencyLevel)
                 .ThenBy(r => r.RequiredDateTime)
                 .ToList();
+
+            _logger.LogInformation("After blood group filtering: {Count} requests match", requests.Count);
 
             // Check if donor has already responded to any of these
             var donorResponses = await _context.DonorRequests
@@ -458,6 +481,9 @@ public class DonorService : IDonorService
                     : null,
                 DonorRespondedAt = donorResponses.TryGetValue(r.Id, out var resp) 
                     ? resp.RespondedAt 
+                    : null,
+                DonorRequestId = donorResponses.TryGetValue(r.Id, out var dr) 
+                    ? dr.Id 
                     : null
             }).ToList();
 
@@ -499,7 +525,7 @@ public class DonorService : IDonorService
             {
                 // Update existing response
                 existingResponse.Status = accept ? RequestStatus.Accepted : RequestStatus.Cancelled;
-                existingResponse.RespondedAt = DateTime.UtcNow;
+                existingResponse.RespondedAt = TimeHelper.Now;
                 existingResponse.ResponseNotes = notes;
             }
             else
@@ -511,10 +537,10 @@ public class DonorService : IDonorService
                     DonorId = donor.Id,
                     Status = accept ? RequestStatus.Accepted : RequestStatus.Cancelled,
                     IsNotified = true,
-                    NotifiedAt = DateTime.UtcNow,
-                    RespondedAt = DateTime.UtcNow,
+                    NotifiedAt = TimeHelper.Now,
+                    RespondedAt = TimeHelper.Now,
                     ResponseNotes = notes,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = TimeHelper.Now
                 };
                 _context.DonorRequests.Add(donorRequest);
             }
@@ -524,7 +550,7 @@ public class DonorService : IDonorService
             {
                 request.AcceptedDonorsCount++;
             }
-            request.UpdatedAt = DateTime.UtcNow;
+            request.UpdatedAt = TimeHelper.Now;
 
             await _context.SaveChangesAsync();
 

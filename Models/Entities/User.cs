@@ -1,4 +1,5 @@
 using SharedLife.Models.Enums;
+using SharedLife.Utilities;
 
 namespace SharedLife.Models.Entities;
 
@@ -15,7 +16,7 @@ public class User
     public DateTime DateOfBirth { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsVerified { get; set; } = false;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = TimeHelper.Now;
     public DateTime? UpdatedAt { get; set; }
     
     // Navigation properties

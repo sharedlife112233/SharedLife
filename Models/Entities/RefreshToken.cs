@@ -1,3 +1,5 @@
+using SharedLife.Utilities;
+
 namespace SharedLife.Models.Entities;
 
 public class RefreshToken
@@ -5,9 +7,9 @@ public class RefreshToken
     public int Id { get; set; }
     public string Token { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = TimeHelper.Now;
     public DateTime? RevokedAt { get; set; }
-    public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
+    public bool IsExpired => TimeHelper.Now >= ExpiresAt;
     public bool IsRevoked => RevokedAt != null;
     public bool IsActive => !IsRevoked && !IsExpired;
     

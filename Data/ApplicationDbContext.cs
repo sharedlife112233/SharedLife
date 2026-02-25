@@ -17,6 +17,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Hospital> Hospitals { get; set; }
     public DbSet<DonationRequest> DonationRequests { get; set; }
     public DbSet<DonorRequest> DonorRequests { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,8 +80,6 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.HospitalName).HasMaxLength(200);
             entity.Property(e => e.HospitalAddress).HasMaxLength(500);
             entity.Property(e => e.City).HasMaxLength(100);
-            entity.Property(e => e.DoctorName).HasMaxLength(100);
-            entity.Property(e => e.DoctorContact).HasMaxLength(20);
             entity.Property(e => e.EmergencyContactName).HasMaxLength(100);
             entity.Property(e => e.EmergencyContactPhone).HasMaxLength(20);
             entity.Property(e => e.EmergencyContactRelation).HasMaxLength(50);
@@ -104,8 +103,6 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.City).IsRequired().HasMaxLength(100);
             entity.Property(e => e.ContactName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.ContactPhone).IsRequired().HasMaxLength(20);
-            entity.Property(e => e.DoctorName).HasMaxLength(100);
-            entity.Property(e => e.DoctorContact).HasMaxLength(20);
             entity.Property(e => e.MedicalNotes).HasMaxLength(1000);
             entity.Property(e => e.AdditionalRequirements).HasMaxLength(500);
             
@@ -149,8 +146,6 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.City).IsRequired().HasMaxLength(100);
             entity.Property(e => e.State).IsRequired().HasMaxLength(100);
             entity.Property(e => e.PinCode).IsRequired().HasMaxLength(10);
-            entity.Property(e => e.ContactPersonName).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.ContactPersonDesignation).HasMaxLength(100);
             entity.Property(e => e.ContactEmail).IsRequired().HasMaxLength(255);
             entity.Property(e => e.ContactPhone).IsRequired().HasMaxLength(20);
             entity.Property(e => e.AlternatePhone).HasMaxLength(20);
@@ -162,6 +157,26 @@ public class ApplicationDbContext : DbContext
                 .WithOne()
                 .HasForeignKey<Hospital>(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ChatMessage configuration
+        modelBuilder.Entity<ChatMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Content).IsRequired().HasMaxLength(1000);
+            
+            entity.HasOne(e => e.DonorRequest)
+                .WithMany()
+                .HasForeignKey(e => e.DonorRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(e => e.SenderUser)
+                .WithMany()
+                .HasForeignKey(e => e.SenderUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            entity.HasIndex(e => e.DonorRequestId);
+            entity.HasIndex(e => new { e.DonorRequestId, e.CreatedAt });
         });
     }
 }

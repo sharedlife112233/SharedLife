@@ -5,6 +5,7 @@ using SharedLife.Models.DTOs.Recipient;
 using SharedLife.Models.Entities;
 using SharedLife.Models.Enums;
 using SharedLife.Services.Interfaces;
+using SharedLife.Utilities;
 
 namespace SharedLife.Services;
 
@@ -59,8 +60,6 @@ public class HospitalService : IHospitalService
                 City = request.City,
                 State = request.State,
                 PinCode = request.PinCode,
-                ContactPersonName = request.ContactPersonName,
-                ContactPersonDesignation = request.ContactPersonDesignation ?? string.Empty,
                 ContactEmail = request.ContactEmail,
                 ContactPhone = request.ContactPhone,
                 AlternatePhone = request.AlternatePhone,
@@ -75,7 +74,7 @@ public class HospitalService : IHospitalService
                 IsOpen24x7 = request.IsOpen24x7,
                 IsVerified = false,
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = TimeHelper.Now
             };
 
             _context.Hospitals.Add(hospital);
@@ -158,8 +157,6 @@ public class HospitalService : IHospitalService
             if (!string.IsNullOrEmpty(request.City)) hospital.City = request.City;
             if (!string.IsNullOrEmpty(request.State)) hospital.State = request.State;
             if (!string.IsNullOrEmpty(request.PinCode)) hospital.PinCode = request.PinCode;
-            if (!string.IsNullOrEmpty(request.ContactPersonName)) hospital.ContactPersonName = request.ContactPersonName;
-            if (!string.IsNullOrEmpty(request.ContactPersonDesignation)) hospital.ContactPersonDesignation = request.ContactPersonDesignation;
             if (!string.IsNullOrEmpty(request.ContactEmail)) hospital.ContactEmail = request.ContactEmail;
             if (!string.IsNullOrEmpty(request.ContactPhone)) hospital.ContactPhone = request.ContactPhone;
             if (request.AlternatePhone != null) hospital.AlternatePhone = request.AlternatePhone;
@@ -173,7 +170,7 @@ public class HospitalService : IHospitalService
             if (request.OperatingHours != null) hospital.OperatingHours = request.OperatingHours;
             if (request.IsOpen24x7.HasValue) hospital.IsOpen24x7 = request.IsOpen24x7.Value;
 
-            hospital.UpdatedAt = DateTime.UtcNow;
+            hospital.UpdatedAt = TimeHelper.Now;
             await _context.SaveChangesAsync();
 
             var profile = MapToProfileDto(hospital, hospital.User);
@@ -207,7 +204,7 @@ public class HospitalService : IHospitalService
                 return (false, "Hospital profile not found", null);
             }
 
-            var now = DateTime.UtcNow;
+            var now = TimeHelper.Now;
             var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
             // Get pending donors for verification
@@ -256,7 +253,7 @@ public class HospitalService : IHospitalService
                     DonorName = d.User.FullName,
                     BloodGroup = d.BloodGroup.ToString(),
                     Status = d.Status.ToString(),
-                    VerifiedAt = d.VerifiedAt ?? DateTime.UtcNow
+                    VerifiedAt = d.VerifiedAt ?? TimeHelper.Now
                 })
                 .ToListAsync();
 
@@ -357,11 +354,11 @@ public class HospitalService : IHospitalService
 
             donor.Status = request.NewStatus;
             donor.VerifiedByHospitalId = hospital.Id;
-            donor.VerifiedAt = DateTime.UtcNow;
-            donor.UpdatedAt = DateTime.UtcNow;
+            donor.VerifiedAt = TimeHelper.Now;
+            donor.UpdatedAt = TimeHelper.Now;
 
             hospital.TotalDonorsVerified++;
-            hospital.UpdatedAt = DateTime.UtcNow;
+            hospital.UpdatedAt = TimeHelper.Now;
 
             await _context.SaveChangesAsync();
 
@@ -452,8 +449,6 @@ public class HospitalService : IHospitalService
                     City = r.City,
                     ContactName = r.ContactName,
                     ContactPhone = r.ContactPhone,
-                    DoctorName = r.DoctorName,
-                    DoctorContact = r.DoctorContact,
                     MedicalNotes = r.MedicalNotes,
                     AdditionalRequirements = r.AdditionalRequirements,
                     RequiredDateTime = r.RequiredDateTime,
@@ -498,7 +493,7 @@ public class HospitalService : IHospitalService
                     break;
                 case "complete":
                     request.Status = RequestStatus.Completed;
-                    request.CompletedAt = DateTime.UtcNow;
+                    request.CompletedAt = TimeHelper.Now;
                     hospital.TotalRequestsProcessed++;
                     break;
                 case "cancel":
@@ -508,8 +503,8 @@ public class HospitalService : IHospitalService
                     return (false, "Invalid action");
             }
 
-            request.UpdatedAt = DateTime.UtcNow;
-            hospital.UpdatedAt = DateTime.UtcNow;
+            request.UpdatedAt = TimeHelper.Now;
+            hospital.UpdatedAt = TimeHelper.Now;
 
             await _context.SaveChangesAsync();
 
@@ -545,8 +540,6 @@ public class HospitalService : IHospitalService
             City = hospital.City,
             State = hospital.State,
             PinCode = hospital.PinCode,
-            ContactPersonName = hospital.ContactPersonName,
-            ContactPersonDesignation = hospital.ContactPersonDesignation,
             ContactEmail = hospital.ContactEmail,
             ContactPhone = hospital.ContactPhone,
             AlternatePhone = hospital.AlternatePhone,
