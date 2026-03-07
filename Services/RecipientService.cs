@@ -476,6 +476,71 @@ public class RecipientService : IRecipientService
 
     #endregion
 
+    #region Donor History
+
+    public async Task<(bool Success, string Message, List<DonorHistoryDto>? Data)> GetDonorHistoryAsync(int userId)
+    {
+        try
+        {
+            var recipient = await _context.Recipients.FirstOrDefaultAsync(r => r.UserId == userId);
+            if (recipient == null)
+            {
+                return (true, "No history found", new List<DonorHistoryDto>());
+            }
+
+            // Get all donor requests that have been accepted or completed for this recipient's donation requests
+            // Use a direct join query to avoid Pomelo primitive collection translation issues
+            var allDonorRequests = await _context.DonorRequests
+                .Include(dr => dr.Donor)
+                    .ThenInclude(d => d.User)
+                .Include(dr => dr.DonationRequest)
+                .Where(dr => dr.DonationRequest.RecipientId == recipient.Id
+                    && (dr.Status == RequestStatus.Accepted || dr.Status == RequestStatus.Completed))
+                .OrderByDescending(dr => dr.CreatedAt)
+                .ToListAsync();
+
+            // Deduplicate by DonorId — show each donor only once (most recent interaction)
+            var donorHistory = allDonorRequests
+                .GroupBy(dr => dr.DonorId)
+                .Select(g => g.OrderByDescending(dr => dr.CreatedAt).First())
+                .ToList();
+
+            var dtos = donorHistory.Select(dr => new DonorHistoryDto
+            {
+                DonorRequestId = dr.Id,
+                DonationRequestId = dr.DonationRequestId,
+                DonorId = dr.DonorId,
+                DonorName = dr.Donor.User.FullName,
+                DonorBloodGroup = dr.Donor.BloodGroup,
+                DonorBloodGroupDisplay = GetBloodGroupDisplay(dr.Donor.BloodGroup),
+                DonorCity = ExtractCity(dr.Donor.User.Address),
+                DonorPhone = dr.Donor.User.PhoneNumber,
+                DonationType = dr.DonationRequest.DonationType,
+                DonationTypeDisplay = dr.DonationRequest.DonationType.ToString(),
+                Quantity = dr.DonationRequest.Quantity,
+                UrgencyLevel = dr.DonationRequest.UrgencyLevel,
+                UrgencyLevelDisplay = dr.DonationRequest.UrgencyLevel.ToString(),
+                HospitalName = dr.DonationRequest.HospitalName,
+                City = dr.DonationRequest.City,
+                Status = dr.Status,
+                StatusDisplay = dr.Status.ToString(),
+                RespondedAt = dr.RespondedAt,
+                RequestCreatedAt = dr.DonationRequest.CreatedAt,
+                RequestCompletedAt = dr.DonationRequest.CompletedAt,
+                ResponseNotes = dr.ResponseNotes
+            }).ToList();
+
+            return (true, $"Found {dtos.Count} donor history records", dtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving donor history for user {UserId}", userId);
+            return (false, "An error occurred while retrieving donor history", null);
+        }
+    }
+
+    #endregion
+
     #region Stats
 
     public async Task<(bool Success, string Message, object? Data)> GetRecipientDashboardStatsAsync(int userId)

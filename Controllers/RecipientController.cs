@@ -342,6 +342,33 @@ public class RecipientController : ControllerBase
 
     #endregion
 
+    #region Donor History
+
+    /// <summary>
+    /// Get donor history for the current recipient (accepted/completed donors)
+    /// </summary>
+    [HttpGet("donor-history")]
+    public async Task<ActionResult<ApiResponse<List<DonorHistoryDto>>>> GetDonorHistory()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var (success, message, data) = await _recipientService.GetDonorHistoryAsync(userId);
+            return Ok(new ApiResponse<List<DonorHistoryDto>>(success, message, data));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized(new ApiResponse<List<DonorHistoryDto>>(false, "Unauthorized"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving donor history");
+            return StatusCode(500, new ApiResponse<List<DonorHistoryDto>>(false, "An error occurred"));
+        }
+    }
+
+    #endregion
+
     #region Dashboard Stats
 
     /// <summary>

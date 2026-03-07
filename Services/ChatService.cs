@@ -309,38 +309,55 @@ public class ChatService : IChatService
 
     public async Task<int> GetUnreadCountAsync(int userId)
     {
-        var user = await _context.Users.FindAsync(userId);
-        if (user == null) return 0;
-
-        // Get all donor request IDs where user can chat
-        List<int> donorRequestIds;
-
-        if (user.Role == UserRole.Donor)
+        try
         {
-            var donor = await _context.Donors.FirstOrDefaultAsync(d => d.UserId == userId);
-            if (donor == null) return 0;
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return 0;
 
-            donorRequestIds = await _context.DonorRequests
-                .Where(dr => dr.DonorId == donor.Id && dr.Status == RequestStatus.Accepted)
-                .Select(dr => dr.Id)
+            // Get all donor request IDs where user can chat
+            List<int> donorRequestIds;
+
+            if (user.Role == UserRole.Donor)
+            {
+                var donor = await _context.Donors.FirstOrDefaultAsync(d => d.UserId == userId);
+                if (donor == null) return 0;
+
+                donorRequestIds = await _context.DonorRequests
+                    .Where(dr => dr.DonorId == donor.Id && dr.Status == RequestStatus.Accepted)
+                    .Select(dr => dr.Id)
+                    .ToListAsync();
+            }
+            else if (user.Role == UserRole.Recipient)
+            {
+                var recipient = await _context.Recipients.FirstOrDefaultAsync(r => r.UserId == userId);
+                if (recipient == null) return 0;
+
+                donorRequestIds = await _context.DonorRequests
+                    .Where(dr => dr.DonationRequest.RecipientId == recipient.Id && dr.Status == RequestStatus.Accepted)
+                    .Select(dr => dr.Id)
+                    .ToListAsync();
+            }
+            else
+            {
+                return 0;
+            }
+
+            if (!donorRequestIds.Any()) return 0;
+
+            // Convert to HashSet for fast lookup and count client-side
+            // to avoid Pomelo/MySQL primitive collection translation issues
+            var donorRequestIdSet = new HashSet<int>(donorRequestIds);
+            var unreadCount = await _context.ChatMessages
+                .Where(m => !m.IsRead && m.SenderUserId != userId)
+                .Select(m => m.DonorRequestId)
                 .ToListAsync();
-        }
-        else if (user.Role == UserRole.Recipient)
-        {
-            var recipient = await _context.Recipients.FirstOrDefaultAsync(r => r.UserId == userId);
-            if (recipient == null) return 0;
 
-            donorRequestIds = await _context.DonorRequests
-                .Where(dr => dr.DonationRequest.RecipientId == recipient.Id && dr.Status == RequestStatus.Accepted)
-                .Select(dr => dr.Id)
-                .ToListAsync();
+            return unreadCount.Count(id => donorRequestIdSet.Contains(id));
         }
-        else
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error getting unread count for user {UserId}", userId);
             return 0;
         }
-
-        return await _context.ChatMessages
-            .CountAsync(m => donorRequestIds.Contains(m.DonorRequestId) && !m.IsRead && m.SenderUserId != userId);
     }
 }

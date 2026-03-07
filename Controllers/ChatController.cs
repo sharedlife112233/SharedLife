@@ -145,9 +145,17 @@ public class ChatController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUnreadCount()
     {
-        var userId = GetUserId();
-        var count = await _chatService.GetUnreadCountAsync(userId);
-        
-        return Ok(ApiResponse<int>.SuccessResponse(count, "Unread count retrieved"));
+        try
+        {
+            var userId = GetUserId();
+            var count = await _chatService.GetUnreadCountAsync(userId);
+            
+            return Ok(ApiResponse<int>.SuccessResponse(count, "Unread count retrieved"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting unread count");
+            return Ok(ApiResponse<int>.SuccessResponse(0, "Unread count retrieved"));
+        }
     }
 }

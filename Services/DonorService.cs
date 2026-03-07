@@ -545,10 +545,15 @@ public class DonorService : IDonorService
                 _context.DonorRequests.Add(donorRequest);
             }
 
-            // Update request stats
+            // Update request stats and status
             if (accept)
             {
                 request.AcceptedDonorsCount++;
+                // Update the donation request status to Accepted if not already completed
+                if (request.Status != RequestStatus.Completed)
+                {
+                    request.Status = RequestStatus.Accepted;
+                }
             }
             request.UpdatedAt = TimeHelper.Now;
 

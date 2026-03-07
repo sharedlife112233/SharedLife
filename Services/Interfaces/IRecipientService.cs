@@ -22,6 +22,9 @@ public interface IRecipientService
     Task<(bool Success, string Message, List<MatchingDonorDto>? Data)> FindMatchingDonorsAsync(BloodGroup bloodGroup, DonationType donationType, string? city = null);
     Task<(bool Success, string Message, int MatchedCount)> DistributeRequestToDonorsAsync(int userId, int requestId);
     
+    // Donor History
+    Task<(bool Success, string Message, List<DonorHistoryDto>? Data)> GetDonorHistoryAsync(int userId);
+    
     // Stats
     Task<(bool Success, string Message, object? Data)> GetRecipientDashboardStatsAsync(int userId);
 }
