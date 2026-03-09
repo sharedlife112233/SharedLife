@@ -16,4 +16,5 @@ public interface IDonorService
     Task<bool> IsDonorAsync(int userId);
     Task<(bool Success, string Message, List<IncomingDonationRequestDto>? Data)> GetIncomingRequestsAsync(int userId);
     Task<(bool Success, string Message)> RespondToRequestAsync(int userId, int requestId, bool accept, string? notes);
+    Task<(bool Success, string Message, List<DonorDonationHistoryDto>? Data)> GetDonationHistoryAsync(int userId);
 }

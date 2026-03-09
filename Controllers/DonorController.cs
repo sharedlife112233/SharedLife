@@ -187,6 +187,24 @@ public class DonorController : ControllerBase
     }
 
     /// <summary>
+    /// Get the donor's own donation history
+    /// </summary>
+    [HttpGet("history")]
+    [Authorize(Roles = "Donor")]
+    public async Task<ActionResult<ApiResponse<List<DonorDonationHistoryDto>>>> GetDonationHistory()
+    {
+        var userId = GetUserId();
+        var (success, message, data) = await _donorService.GetDonationHistoryAsync(userId);
+
+        if (!success)
+        {
+            return BadRequest(ApiResponse<List<DonorDonationHistoryDto>>.ErrorResponse(message));
+        }
+
+        return Ok(ApiResponse<List<DonorDonationHistoryDto>>.SuccessResponse(data!, message));
+    }
+
+    /// <summary>
     /// Respond to a donation request (accept or decline)
     /// </summary>
     [HttpPost("requests/{requestId}/respond")]

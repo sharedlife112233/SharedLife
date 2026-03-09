@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SharedLife")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+da88d83da222215a3f90d974c513721ef76d2718")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3255951734dacb567642ff523180b179855283fb")]
 [assembly: System.Reflection.AssemblyProductAttribute("SharedLife")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SharedLife")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

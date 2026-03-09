@@ -572,6 +572,60 @@ public class DonorService : IDonorService
     }
 
     /// <summary>
+    /// Get the donor's own donation history (all requests they responded to)
+    /// </summary>
+    public async Task<(bool Success, string Message, List<DonorDonationHistoryDto>? Data)> GetDonationHistoryAsync(int userId)
+    {
+        try
+        {
+            var donor = await _context.Donors.FirstOrDefaultAsync(d => d.UserId == userId);
+            if (donor == null)
+            {
+                return (false, "Donor profile not found", null);
+            }
+
+            var donorRequests = await _context.DonorRequests
+                .Include(dr => dr.DonationRequest)
+                    .ThenInclude(r => r.Recipient)
+                        .ThenInclude(rec => rec.User)
+                .Where(dr => dr.DonorId == donor.Id)
+                .OrderByDescending(dr => dr.RespondedAt ?? dr.CreatedAt)
+                .ToListAsync();
+
+            var history = donorRequests.Select(dr => new DonorDonationHistoryDto
+            {
+                DonorRequestId = dr.Id,
+                DonationRequestId = dr.DonationRequestId,
+                RecipientName = dr.DonationRequest.Recipient?.User?.FullName ?? "Anonymous",
+                BloodGroup = dr.DonationRequest.BloodGroup,
+                BloodGroupDisplay = GetBloodGroupDisplay(dr.DonationRequest.BloodGroup),
+                DonationType = dr.DonationRequest.DonationType,
+                DonationTypeDisplay = dr.DonationRequest.DonationType.ToString(),
+                Quantity = dr.DonationRequest.Quantity,
+                UrgencyLevel = dr.DonationRequest.UrgencyLevel,
+                UrgencyLevelDisplay = dr.DonationRequest.UrgencyLevel.ToString(),
+                HospitalName = dr.DonationRequest.HospitalName,
+                HospitalLocation = dr.DonationRequest.HospitalLocation,
+                City = dr.DonationRequest.City,
+                Status = dr.Status,
+                StatusDisplay = dr.Status.ToString(),
+                RespondedAt = dr.RespondedAt,
+                RequestCreatedAt = dr.DonationRequest.CreatedAt,
+                RequiredDateTime = dr.DonationRequest.RequiredDateTime,
+                RequestCompletedAt = dr.DonationRequest.CompletedAt,
+                ResponseNotes = dr.ResponseNotes
+            }).ToList();
+
+            return (true, $"Found {history.Count} donation records", history);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting donation history for user {UserId}", userId);
+            return (false, "An error occurred while retrieving donation history", null);
+        }
+    }
+
+    /// <summary>
     /// Get blood groups that this donor can donate to
     /// Based on blood type compatibility
     /// </summary>

@@ -367,6 +367,29 @@ public class RecipientController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Get full donation history for the current recipient (all records, no deduplication)
+    /// </summary>
+    [HttpGet("donor-history/all")]
+    public async Task<ActionResult<ApiResponse<List<DonorHistoryDto>>>> GetFullDonorHistory()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var (success, message, data) = await _recipientService.GetFullDonorHistoryAsync(userId);
+            return Ok(new ApiResponse<List<DonorHistoryDto>>(success, message, data));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized(new ApiResponse<List<DonorHistoryDto>>(false, "Unauthorized"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving full donor history");
+            return StatusCode(500, new ApiResponse<List<DonorHistoryDto>>(false, "An error occurred"));
+        }
+    }
+
     #endregion
 
     #region Dashboard Stats

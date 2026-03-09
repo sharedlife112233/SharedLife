@@ -350,27 +350,10 @@ public class RecipientService : IRecipientService
                            d.Status == DonorStatus.Active &&
                            compatibleGroups.Contains(d.BloodGroup));
 
-            // Filter by donation type preferences
-            switch (donationType)
+            // For blood donations, check cooldown eligibility
+            if (donationType == DonationType.Blood)
             {
-                case DonationType.Blood:
-                    query = query.Where(d => CanDonateBlood(d.LastBloodDonationDate));
-                    break;
-                case DonationType.Plasma:
-                    query = query.Where(d => d.WillingToDonatePlasma);
-                    break;
-                case DonationType.Platelets:
-                    query = query.Where(d => d.WillingToDonatePlatelets);
-                    break;
-                case DonationType.Organ:
-                    query = query.Where(d => d.WillingToDonateOrgan);
-                    break;
-                case DonationType.BoneMarrow:
-                    query = query.Where(d => d.WillingToDonateBoneMarrow);
-                    break;
-                case DonationType.Eye:
-                    query = query.Where(d => d.WillingToDonateEye);
-                    break;
+                query = query.Where(d => CanDonateBlood(d.LastBloodDonationDate));
             }
 
             // Filter by city if provided
@@ -521,7 +504,9 @@ public class RecipientService : IRecipientService
                 UrgencyLevel = dr.DonationRequest.UrgencyLevel,
                 UrgencyLevelDisplay = dr.DonationRequest.UrgencyLevel.ToString(),
                 HospitalName = dr.DonationRequest.HospitalName,
+                HospitalLocation = dr.DonationRequest.HospitalLocation,
                 City = dr.DonationRequest.City,
+                RequiredDateTime = dr.DonationRequest.RequiredDateTime,
                 Status = dr.Status,
                 StatusDisplay = dr.Status.ToString(),
                 RespondedAt = dr.RespondedAt,
@@ -535,6 +520,61 @@ public class RecipientService : IRecipientService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving donor history for user {UserId}", userId);
+            return (false, "An error occurred while retrieving donor history", null);
+        }
+    }
+
+    public async Task<(bool Success, string Message, List<DonorHistoryDto>? Data)> GetFullDonorHistoryAsync(int userId)
+    {
+        try
+        {
+            var recipient = await _context.Recipients.FirstOrDefaultAsync(r => r.UserId == userId);
+            if (recipient == null)
+            {
+                return (true, "No history found", new List<DonorHistoryDto>());
+            }
+
+            var allDonorRequests = await _context.DonorRequests
+                .Include(dr => dr.Donor)
+                    .ThenInclude(d => d.User)
+                .Include(dr => dr.DonationRequest)
+                .Where(dr => dr.DonationRequest.RecipientId == recipient.Id
+                    && (dr.Status == RequestStatus.Accepted || dr.Status == RequestStatus.Completed))
+                .OrderByDescending(dr => dr.CreatedAt)
+                .ToListAsync();
+
+            var dtos = allDonorRequests.Select(dr => new DonorHistoryDto
+            {
+                DonorRequestId = dr.Id,
+                DonationRequestId = dr.DonationRequestId,
+                DonorId = dr.DonorId,
+                DonorName = dr.Donor.User.FullName,
+                DonorBloodGroup = dr.Donor.BloodGroup,
+                DonorBloodGroupDisplay = GetBloodGroupDisplay(dr.Donor.BloodGroup),
+                DonorCity = ExtractCity(dr.Donor.User.Address),
+                DonorPhone = dr.Donor.User.PhoneNumber,
+                DonationType = dr.DonationRequest.DonationType,
+                DonationTypeDisplay = dr.DonationRequest.DonationType.ToString(),
+                Quantity = dr.DonationRequest.Quantity,
+                UrgencyLevel = dr.DonationRequest.UrgencyLevel,
+                UrgencyLevelDisplay = dr.DonationRequest.UrgencyLevel.ToString(),
+                HospitalName = dr.DonationRequest.HospitalName,
+                HospitalLocation = dr.DonationRequest.HospitalLocation,
+                City = dr.DonationRequest.City,
+                RequiredDateTime = dr.DonationRequest.RequiredDateTime,
+                Status = dr.Status,
+                StatusDisplay = dr.Status.ToString(),
+                RespondedAt = dr.RespondedAt,
+                RequestCreatedAt = dr.DonationRequest.CreatedAt,
+                RequestCompletedAt = dr.DonationRequest.CompletedAt,
+                ResponseNotes = dr.ResponseNotes
+            }).ToList();
+
+            return (true, $"Found {dtos.Count} donation history records", dtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving full donor history for user {UserId}", userId);
             return (false, "An error occurred while retrieving donor history", null);
         }
     }

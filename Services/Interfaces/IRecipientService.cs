@@ -24,6 +24,7 @@ public interface IRecipientService
     
     // Donor History
     Task<(bool Success, string Message, List<DonorHistoryDto>? Data)> GetDonorHistoryAsync(int userId);
+    Task<(bool Success, string Message, List<DonorHistoryDto>? Data)> GetFullDonorHistoryAsync(int userId);
     
     // Stats
     Task<(bool Success, string Message, object? Data)> GetRecipientDashboardStatsAsync(int userId);
