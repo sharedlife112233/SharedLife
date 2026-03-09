@@ -20,10 +20,35 @@ public static class DbInitializer
             {
                 await context.Database.MigrateAsync();
             }
-            catch (Exception migrateEx) when (migrateEx.Message.Contains("already exists"))
+            catch (Exception migrateEx) when (migrateEx.Message.Contains("already exists") || migrateEx.Message.Contains("Duplicate column"))
             {
-                logger.LogWarning("Some tables already exist, ensuring database is created instead of migrating");
-                await context.Database.EnsureCreatedAsync();
+                logger.LogWarning("Some tables/columns already exist. Ensuring missing tables are created via raw SQL.");
+                // Create DonorOffers table if missing
+                try
+                {
+                    await context.Database.ExecuteSqlRawAsync(@"
+                        CREATE TABLE IF NOT EXISTS `DonorOffers` (
+                            `Id` int NOT NULL AUTO_INCREMENT,
+                            `DonorId` int NOT NULL,
+                            `DonationType` varchar(50) NOT NULL,
+                            `Quantity` int NOT NULL DEFAULT 1,
+                            `HospitalName` varchar(200) NOT NULL,
+                            `HospitalLocation` varchar(500) NOT NULL,
+                            `City` varchar(100) NOT NULL,
+                            `PreferredDate` datetime(6) NOT NULL,
+                            `Notes` varchar(500) NULL,
+                            `Status` varchar(50) NOT NULL,
+                            `CreatedAt` datetime(6) NOT NULL,
+                            `UpdatedAt` datetime(6) NULL,
+                            PRIMARY KEY (`Id`),
+                            CONSTRAINT `FK_DonorOffers_Donors_DonorId` FOREIGN KEY (`DonorId`) REFERENCES `Donors` (`Id`) ON DELETE CASCADE
+                        ) CHARACTER SET utf8mb4;
+                    ");
+                }
+                catch (Exception tableEx) when (tableEx.Message.Contains("already exists"))
+                {
+                    logger.LogInformation("DonorOffers table already exists");
+                }
             }
 
             // Seed admin user

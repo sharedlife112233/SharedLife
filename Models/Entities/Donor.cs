@@ -48,6 +48,11 @@ public class Donor
     public string? EmergencyContactPhone { get; set; }
     public string? EmergencyContactRelation { get; set; }
     
+    // Document for hospital verification
+    public string? DocumentPath { get; set; }
+    public string? DocumentOriginalName { get; set; }
+    public DateTime? DocumentUploadedAt { get; set; }
+    
     // Verification
     public DonorStatus Status { get; set; } = DonorStatus.Pending;
     public int? VerifiedByHospitalId { get; set; }

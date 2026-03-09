@@ -353,6 +353,11 @@ public class HospitalService : IHospitalService
             }
 
             donor.Status = request.NewStatus;
+            if (request.NewStatus == DonorStatus.Verified)
+            {
+                donor.Status = DonorStatus.Active;
+                donor.IsAvailable = true;
+            }
             donor.VerifiedByHospitalId = hospital.Id;
             donor.VerifiedAt = TimeHelper.Now;
             donor.UpdatedAt = TimeHelper.Now;
@@ -594,8 +599,59 @@ public class HospitalService : IHospitalService
             EmergencyContactPhone = donor.EmergencyContactPhone,
             EmergencyContactRelation = donor.EmergencyContactRelation,
             Status = donor.Status,
-            CreatedAt = donor.CreatedAt
+            CreatedAt = donor.CreatedAt,
+            DocumentPath = donor.DocumentPath,
+            DocumentOriginalName = donor.DocumentOriginalName,
+            DocumentUploadedAt = donor.DocumentUploadedAt
         };
+    }
+
+    #endregion
+
+    #region Donor Offers
+
+    public async Task<(bool Success, string Message, List<Models.DTOs.Donor.DonorOfferDto>? Data)> GetAreaDonorOffersAsync(int userId, int page, int pageSize)
+    {
+        try
+        {
+            var hospital = await _context.Hospitals.FirstOrDefaultAsync(h => h.UserId == userId);
+            if (hospital == null)
+                return (false, "Hospital profile not found", null);
+
+            var offers = await _context.DonorOffers
+                .Where(o => o.City == hospital.City && o.Status == DonorOfferStatus.Available)
+                .Include(o => o.Donor)
+                    .ThenInclude(d => d.User)
+                .OrderByDescending(o => o.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(o => new Models.DTOs.Donor.DonorOfferDto
+                {
+                    Id = o.Id,
+                    DonorName = o.Donor.User.FullName,
+                    BloodGroup = o.Donor.BloodGroup,
+                    BloodGroupDisplay = o.Donor.BloodGroup.ToString(),
+                    DonationType = o.DonationType,
+                    DonationTypeDisplay = o.DonationType.ToString(),
+                    Quantity = o.Quantity,
+                    HospitalName = o.HospitalName,
+                    HospitalLocation = o.HospitalLocation,
+                    City = o.City,
+                    PreferredDate = o.PreferredDate,
+                    Notes = o.Notes,
+                    Status = o.Status,
+                    StatusDisplay = o.Status.ToString(),
+                    CreatedAt = o.CreatedAt
+                })
+                .ToListAsync();
+
+            return (true, "Donor offers retrieved successfully", offers);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting area donor offers for user {UserId}", userId);
+            return (false, "An error occurred while retrieving donor offers", null);
+        }
     }
 
     #endregion

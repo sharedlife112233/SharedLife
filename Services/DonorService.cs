@@ -343,6 +343,9 @@ public class DonorService : IDonorService
             Status = donor.Status,
             StatusDisplay = donor.Status.ToString(),
             VerifiedAt = donor.VerifiedAt,
+            DocumentPath = donor.DocumentPath,
+            DocumentOriginalName = donor.DocumentOriginalName,
+            DocumentUploadedAt = donor.DocumentUploadedAt,
             CreatedAt = donor.CreatedAt,
             UpdatedAt = donor.UpdatedAt
         };
@@ -384,6 +387,53 @@ public class DonorService : IDonorService
         return (TimeHelper.Now - lastDonationDate.Value).TotalDays >= BloodDonationCooldownDays;
     }
 
+    public async Task<(bool Success, string Message)> UpdateDocumentAsync(int userId, string documentPath, string originalName)
+    {
+        try
+        {
+            var donor = await _context.Donors.FirstOrDefaultAsync(d => d.UserId == userId);
+            if (donor == null)
+                return (false, "Donor profile not found");
+
+            donor.DocumentPath = documentPath;
+            donor.DocumentOriginalName = originalName;
+            donor.DocumentUploadedAt = TimeHelper.Now;
+            donor.UpdatedAt = TimeHelper.Now;
+
+            await _context.SaveChangesAsync();
+            return (true, "Document uploaded successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating document for user {UserId}", userId);
+            return (false, "Failed to update document");
+        }
+    }
+
+    public async Task<(bool Success, string Message, string? OldPath)> DeleteDocumentAsync(int userId)
+    {
+        try
+        {
+            var donor = await _context.Donors.FirstOrDefaultAsync(d => d.UserId == userId);
+            if (donor == null)
+                return (false, "Donor profile not found", null);
+
+            var oldPath = donor.DocumentPath;
+            donor.DocumentPath = null;
+            donor.DocumentOriginalName = null;
+            donor.DocumentUploadedAt = null;
+            donor.UpdatedAt = TimeHelper.Now;
+
+            await _context.SaveChangesAsync();
+            return (true, "Document deleted successfully", oldPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting document for user {UserId}", userId);
+            return (false, "Failed to delete document", null);
+        }
+    }
+
     private static (bool CanDonate, int DaysUntil) CalculateBloodDonationEligibility(DateTime? lastDonationDate)
     {
         if (!lastDonationDate.HasValue)
@@ -412,6 +462,12 @@ public class DonorService : IDonorService
             if (donor == null)
             {
                 return (false, "Donor profile not found", null);
+            }
+
+            // Only Active donors can view incoming requests
+            if (donor.Status != DonorStatus.Active)
+            {
+                return (false, "Your profile has not been verified by a hospital yet. You cannot receive donation requests until your profile is approved.", new List<IncomingDonationRequestDto>());
             }
 
             // Log donor's blood group for debugging
@@ -508,6 +564,12 @@ public class DonorService : IDonorService
             if (donor == null)
             {
                 return (false, "Donor profile not found");
+            }
+
+            // Only Active donors can respond to requests
+            if (donor.Status != DonorStatus.Active)
+            {
+                return (false, "Your profile has not been verified by a hospital. You cannot respond to donation requests until approved.");
             }
 
             // Get the donation request
@@ -680,6 +742,125 @@ public class DonorService : IDonorService
                 BloodGroup.ABPositive 
             },
             _ => new List<BloodGroup>()
+        };
+    }
+
+    public async Task<(bool Success, string Message, DonorOfferDto? Data)> CreateDonorOfferAsync(int userId, CreateDonorOfferDto request)
+    {
+        try
+        {
+            var donor = await _context.Donors
+                .Include(d => d.User)
+                .FirstOrDefaultAsync(d => d.UserId == userId);
+
+            if (donor == null)
+                return (false, "Donor profile not found", null);
+
+            if (donor.Status != DonorStatus.Active)
+                return (false, "Only verified (Active) donors can create donation offers", null);
+
+            var offer = new DonorOffer
+            {
+                DonorId = donor.Id,
+                DonationType = request.DonationType,
+                Quantity = request.Quantity,
+                HospitalName = request.HospitalName,
+                HospitalLocation = request.HospitalLocation,
+                City = request.City,
+                PreferredDate = request.PreferredDate,
+                Notes = request.Notes,
+                Status = DonorOfferStatus.Available,
+                CreatedAt = TimeHelper.Now
+            };
+
+            _context.DonorOffers.Add(offer);
+            await _context.SaveChangesAsync();
+
+            var dto = MapToOfferDto(offer, donor);
+            return (true, "Donation offer created successfully", dto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating donor offer for user {UserId}", userId);
+            return (false, "An error occurred while creating the donation offer", null);
+        }
+    }
+
+    public async Task<(bool Success, string Message, List<DonorOfferDto>? Data)> GetDonorOffersAsync(int userId)
+    {
+        try
+        {
+            var donor = await _context.Donors
+                .Include(d => d.User)
+                .FirstOrDefaultAsync(d => d.UserId == userId);
+
+            if (donor == null)
+                return (false, "Donor profile not found", null);
+
+            var offers = await _context.DonorOffers
+                .Where(o => o.DonorId == donor.Id)
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
+
+            var dtos = offers.Select(o => MapToOfferDto(o, donor)).ToList();
+            return (true, "Donor offers retrieved", dtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting donor offers for user {UserId}", userId);
+            return (false, "An error occurred while retrieving offers", null);
+        }
+    }
+
+    public async Task<(bool Success, string Message)> CancelDonorOfferAsync(int userId, int offerId)
+    {
+        try
+        {
+            var donor = await _context.Donors.FirstOrDefaultAsync(d => d.UserId == userId);
+            if (donor == null)
+                return (false, "Donor profile not found");
+
+            var offer = await _context.DonorOffers
+                .FirstOrDefaultAsync(o => o.Id == offerId && o.DonorId == donor.Id);
+
+            if (offer == null)
+                return (false, "Donation offer not found");
+
+            if (offer.Status == DonorOfferStatus.Cancelled)
+                return (false, "Offer is already cancelled");
+
+            offer.Status = DonorOfferStatus.Cancelled;
+            offer.UpdatedAt = TimeHelper.Now;
+            await _context.SaveChangesAsync();
+
+            return (true, "Donation offer cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cancelling donor offer {OfferId} for user {UserId}", offerId, userId);
+            return (false, "An error occurred while cancelling the offer");
+        }
+    }
+
+    private static DonorOfferDto MapToOfferDto(DonorOffer offer, Donor donor)
+    {
+        return new DonorOfferDto
+        {
+            Id = offer.Id,
+            DonorName = donor.User.FullName,
+            BloodGroup = donor.BloodGroup,
+            BloodGroupDisplay = donor.BloodGroup.ToString(),
+            DonationType = offer.DonationType,
+            DonationTypeDisplay = offer.DonationType.ToString(),
+            Quantity = offer.Quantity,
+            HospitalName = offer.HospitalName,
+            HospitalLocation = offer.HospitalLocation,
+            City = offer.City,
+            PreferredDate = offer.PreferredDate,
+            Notes = offer.Notes,
+            Status = offer.Status,
+            StatusDisplay = offer.Status.ToString(),
+            CreatedAt = offer.CreatedAt
         };
     }
 }

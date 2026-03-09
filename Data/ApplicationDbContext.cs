@@ -18,6 +18,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<DonationRequest> DonationRequests { get; set; }
     public DbSet<DonorRequest> DonorRequests { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<DonorOffer> DonorOffers { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -177,6 +178,23 @@ public class ApplicationDbContext : DbContext
             
             entity.HasIndex(e => e.DonorRequestId);
             entity.HasIndex(e => new { e.DonorRequestId, e.CreatedAt });
+        });
+
+        // DonorOffer configuration
+        modelBuilder.Entity<DonorOffer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DonationType).HasConversion<string>();
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.HospitalName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.HospitalLocation).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.City).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            
+            entity.HasOne(e => e.Donor)
+                .WithMany()
+                .HasForeignKey(e => e.DonorId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

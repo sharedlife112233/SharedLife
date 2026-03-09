@@ -57,6 +57,12 @@ public class DonorProfileDto
     public string StatusDisplay { get; set; } = string.Empty;
     public DateTime? VerifiedAt { get; set; }
     
+    // Document
+    public string? DocumentPath { get; set; }
+    public string? DocumentOriginalName { get; set; }
+    public DateTime? DocumentUploadedAt { get; set; }
+    public bool HasDocument => !string.IsNullOrEmpty(DocumentPath);
+    
     // Timestamps
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

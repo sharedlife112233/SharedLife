@@ -17,4 +17,9 @@ public interface IDonorService
     Task<(bool Success, string Message, List<IncomingDonationRequestDto>? Data)> GetIncomingRequestsAsync(int userId);
     Task<(bool Success, string Message)> RespondToRequestAsync(int userId, int requestId, bool accept, string? notes);
     Task<(bool Success, string Message, List<DonorDonationHistoryDto>? Data)> GetDonationHistoryAsync(int userId);
+    Task<(bool Success, string Message)> UpdateDocumentAsync(int userId, string documentPath, string originalName);
+    Task<(bool Success, string Message, string? OldPath)> DeleteDocumentAsync(int userId);
+    Task<(bool Success, string Message, DonorOfferDto? Data)> CreateDonorOfferAsync(int userId, CreateDonorOfferDto request);
+    Task<(bool Success, string Message, List<DonorOfferDto>? Data)> GetDonorOffersAsync(int userId);
+    Task<(bool Success, string Message)> CancelDonorOfferAsync(int userId, int offerId);
 }

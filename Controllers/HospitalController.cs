@@ -246,6 +246,30 @@ public class HospitalController : ControllerBase
     }
 
     #endregion
+
+    #region Donor Offers
+
+    /// <summary>
+    /// Get donor offers in hospital's area
+    /// </summary>
+    [HttpGet("donor-offers")]
+    [Authorize(Roles = "Hospital")]
+    public async Task<ActionResult<ApiResponse<List<Models.DTOs.Donor.DonorOfferDto>>>> GetAreaDonorOffers(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var userId = GetUserId();
+        var (success, message, data) = await _hospitalService.GetAreaDonorOffersAsync(userId, page, pageSize);
+
+        if (!success)
+        {
+            return BadRequest(ApiResponse<List<Models.DTOs.Donor.DonorOfferDto>>.ErrorResponse(message));
+        }
+
+        return Ok(ApiResponse<List<Models.DTOs.Donor.DonorOfferDto>>.SuccessResponse(data!, message));
+    }
+
+    #endregion
 }
 
 public class ProcessRequestDto

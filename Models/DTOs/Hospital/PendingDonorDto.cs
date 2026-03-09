@@ -44,4 +44,10 @@ public class PendingDonorDto
     // Status
     public DonorStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
+    
+    // Document
+    public string? DocumentPath { get; set; }
+    public string? DocumentOriginalName { get; set; }
+    public DateTime? DocumentUploadedAt { get; set; }
+    public bool HasDocument => !string.IsNullOrEmpty(DocumentPath);
 }

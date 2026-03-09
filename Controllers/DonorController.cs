@@ -13,11 +13,13 @@ public class DonorController : ControllerBase
 {
     private readonly IDonorService _donorService;
     private readonly ILogger<DonorController> _logger;
+    private readonly IWebHostEnvironment _env;
 
-    public DonorController(IDonorService donorService, ILogger<DonorController> logger)
+    public DonorController(IDonorService donorService, ILogger<DonorController> logger, IWebHostEnvironment env)
     {
         _donorService = donorService;
         _logger = logger;
+        _env = env;
     }
 
     private int GetUserId()
@@ -65,7 +67,7 @@ public class DonorController : ControllerBase
     /// <summary>
     /// Get donor by ID (for staff/admin viewing)
     /// </summary>
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     [Authorize(Roles = "Staff,Admin")]
     public async Task<ActionResult<ApiResponse<DonorProfileDto>>> GetById(int id)
     {
@@ -221,8 +223,121 @@ public class DonorController : ControllerBase
 
         return Ok(ApiResponse<object>.SuccessResponse(null!, message));
     }
-}
 
+    /// <summary>
+    /// Upload a verification document (ID, medical report, etc.)
+    /// </summary>
+    [HttpPost("document")]
+    [Authorize(Roles = "Donor")]
+    public async Task<ActionResult<ApiResponse<object>>> UploadDocument([FromForm] IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(ApiResponse<object>.ErrorResponse("No file provided"));
+
+        // Validate file type
+        var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!allowedExtensions.Contains(ext))
+            return BadRequest(ApiResponse<object>.ErrorResponse("Only PDF, JPG, and PNG files are allowed"));
+
+        // Validate file size (5MB max)
+        if (file.Length > 5 * 1024 * 1024)
+            return BadRequest(ApiResponse<object>.ErrorResponse("File size must be less than 5MB"));
+
+        var userId = GetUserId();
+        var uploadsDir = Path.Combine(_env.ContentRootPath, "uploads", "documents");
+        Directory.CreateDirectory(uploadsDir);
+
+        var safeFileName = $"{userId}_{Guid.NewGuid():N}{ext}";
+        var filePath = Path.Combine(uploadsDir, safeFileName);
+
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var relativePath = $"/uploads/documents/{safeFileName}";
+        var (success, message) = await _donorService.UpdateDocumentAsync(userId, relativePath, file.FileName);
+
+        if (!success)
+            return BadRequest(ApiResponse<object>.ErrorResponse(message));
+
+        return Ok(ApiResponse<object>.SuccessResponse(
+            new { documentPath = relativePath, originalName = file.FileName }, message));
+    }
+
+    /// <summary>
+    /// Delete the uploaded verification document
+    /// </summary>
+    [HttpDelete("document")]
+    [Authorize(Roles = "Donor")]
+    public async Task<ActionResult<ApiResponse<object>>> DeleteDocument()
+    {
+        var userId = GetUserId();
+        var (success, message, oldPath) = await _donorService.DeleteDocumentAsync(userId);
+
+        if (!success)
+            return BadRequest(ApiResponse<object>.ErrorResponse(message));
+
+        // Delete physical file
+        if (!string.IsNullOrEmpty(oldPath))
+        {
+            var fullPath = Path.Combine(_env.ContentRootPath, oldPath.TrimStart('/'));
+            if (System.IO.File.Exists(fullPath))
+                System.IO.File.Delete(fullPath);
+        }
+
+        return Ok(ApiResponse<object>.SuccessResponse(null!, message));
+    }
+
+    /// <summary>
+    /// Create a donation offer (donor proactively offers to donate)
+    /// </summary>
+    [HttpPost("offers")]
+    [Authorize(Roles = "Donor")]
+    public async Task<ActionResult<ApiResponse<DonorOfferDto>>> CreateOffer([FromBody] CreateDonorOfferDto request)
+    {
+        var userId = GetUserId();
+        var (success, message, data) = await _donorService.CreateDonorOfferAsync(userId, request);
+
+        if (!success)
+            return BadRequest(ApiResponse<DonorOfferDto>.ErrorResponse(message));
+
+        return Ok(ApiResponse<DonorOfferDto>.SuccessResponse(data!, message));
+    }
+
+    /// <summary>
+    /// Get all donation offers by the current donor
+    /// </summary>
+    [HttpGet("offers")]
+    [Authorize(Roles = "Donor")]
+    public async Task<ActionResult<ApiResponse<List<DonorOfferDto>>>> GetOffers()
+    {
+        var userId = GetUserId();
+        var (success, message, data) = await _donorService.GetDonorOffersAsync(userId);
+
+        if (!success)
+            return BadRequest(ApiResponse<List<DonorOfferDto>>.ErrorResponse(message));
+
+        return Ok(ApiResponse<List<DonorOfferDto>>.SuccessResponse(data!, message));
+    }
+
+    /// <summary>
+    /// Cancel a donation offer
+    /// </summary>
+    [HttpPatch("offers/{offerId}/cancel")]
+    [Authorize(Roles = "Donor")]
+    public async Task<ActionResult<ApiResponse<object>>> CancelOffer(int offerId)
+    {
+        var userId = GetUserId();
+        var (success, message) = await _donorService.CancelDonorOfferAsync(userId, offerId);
+
+        if (!success)
+            return BadRequest(ApiResponse<object>.ErrorResponse(message));
+
+        return Ok(ApiResponse<object>.SuccessResponse(null!, message));
+    }
+}
 public class DonorResponseDto
 {
     public bool Accept { get; set; }

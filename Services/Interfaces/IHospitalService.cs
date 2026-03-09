@@ -23,4 +23,7 @@ public interface IHospitalService
     // Donation Requests
     Task<(bool Success, string Message, List<DonationRequestDto>? Data)> GetAreaRequestsAsync(int userId, int page, int pageSize, string? status);
     Task<(bool Success, string Message)> ProcessRequestAsync(int userId, int requestId, string action, string? notes);
+    
+    // Donor Offers
+    Task<(bool Success, string Message, List<Models.DTOs.Donor.DonorOfferDto>? Data)> GetAreaDonorOffersAsync(int userId, int page, int pageSize);
 }
