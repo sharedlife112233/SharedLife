@@ -407,20 +407,19 @@ public class AdminService : IAdminService
             var totalCount = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
-            var donors = await query
+            var donorRows = await query
                 .OrderByDescending(d => d.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(d => new DonorListDto
+                .Select(d => new
                 {
                     Id = d.Id,
                     UserId = d.UserId,
                     FullName = d.User.FullName,
                     Email = d.User.Email,
                     PhoneNumber = d.User.PhoneNumber ?? "",
-                    BloodGroup = d.BloodGroup.ToString(),
-                    BloodGroupDisplay = BloodGroupDisplayNames.GetValueOrDefault(d.BloodGroup, d.BloodGroup.ToString()),
-                    Status = d.Status.ToString(),
+                    BloodGroup = d.BloodGroup,
+                    Status = d.Status,
                     IsAvailable = d.IsAvailable,
                     IsVerified = d.VerifiedAt != null,
                     TotalBloodDonations = d.TotalBloodDonations,
@@ -438,6 +437,33 @@ public class AdminService : IAdminService
                     VerifiedAt = d.VerifiedAt
                 })
                 .ToListAsync();
+
+            var donors = donorRows.Select(d => new DonorListDto
+            {
+                Id = d.Id,
+                UserId = d.UserId,
+                FullName = d.FullName,
+                Email = d.Email,
+                PhoneNumber = d.PhoneNumber,
+                BloodGroup = d.BloodGroup.ToString(),
+                BloodGroupDisplay = BloodGroupDisplayNames.GetValueOrDefault(d.BloodGroup, d.BloodGroup.ToString()),
+                Status = d.Status.ToString(),
+                IsAvailable = d.IsAvailable,
+                IsVerified = d.IsVerified,
+                TotalBloodDonations = d.TotalBloodDonations,
+                LastBloodDonationDate = d.LastBloodDonationDate,
+                WillingToDonatePlasma = d.WillingToDonatePlasma,
+                WillingToDonatePlatelets = d.WillingToDonatePlatelets,
+                WillingToDonateOrgan = d.WillingToDonateOrgan,
+                WillingToDonateBoneMarrow = d.WillingToDonateBoneMarrow,
+                WillingToDonateEye = d.WillingToDonateEye,
+                Weight = d.Weight,
+                Height = d.Height,
+                HasChronicDisease = d.HasChronicDisease,
+                HasInfectiousDisease = d.HasInfectiousDisease,
+                CreatedAt = d.CreatedAt,
+                VerifiedAt = d.VerifiedAt
+            }).ToList();
 
             return (true, "Donors retrieved successfully", new DonorListResponseDto
             {
@@ -622,23 +648,22 @@ public class AdminService : IAdminService
             var totalCount = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
-            var requests = await query
+            var requestRows = await query
                 .OrderByDescending(r => r.UrgencyLevel)
                 .ThenByDescending(r => r.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(r => new RequestListDto
+                .Select(r => new
                 {
                     Id = r.Id,
                     RecipientId = r.RecipientId,
                     RecipientName = r.Recipient.User.FullName,
                     RecipientEmail = r.Recipient.User.Email,
-                    BloodGroup = r.BloodGroup.ToString(),
-                    BloodGroupDisplay = BloodGroupDisplayNames.GetValueOrDefault(r.BloodGroup, r.BloodGroup.ToString()),
-                    DonationType = r.DonationType.ToString(),
+                    BloodGroup = r.BloodGroup,
+                    DonationType = r.DonationType,
                     Quantity = r.Quantity,
-                    UrgencyLevel = r.UrgencyLevel.ToString(),
-                    Status = r.Status.ToString(),
+                    UrgencyLevel = r.UrgencyLevel,
+                    Status = r.Status,
                     HospitalName = r.HospitalName,
                     City = r.City,
                     ContactName = r.ContactName,
@@ -650,6 +675,29 @@ public class AdminService : IAdminService
                     CompletedAt = r.CompletedAt
                 })
                 .ToListAsync();
+
+            var requests = requestRows.Select(r => new RequestListDto
+            {
+                Id = r.Id,
+                RecipientId = r.RecipientId,
+                RecipientName = r.RecipientName,
+                RecipientEmail = r.RecipientEmail,
+                BloodGroup = r.BloodGroup.ToString(),
+                BloodGroupDisplay = BloodGroupDisplayNames.GetValueOrDefault(r.BloodGroup, r.BloodGroup.ToString()),
+                DonationType = r.DonationType.ToString(),
+                Quantity = r.Quantity,
+                UrgencyLevel = r.UrgencyLevel.ToString(),
+                Status = r.Status.ToString(),
+                HospitalName = r.HospitalName,
+                City = r.City,
+                ContactName = r.ContactName,
+                ContactPhone = r.ContactPhone,
+                RequiredDateTime = r.RequiredDateTime,
+                MatchedDonorsCount = r.MatchedDonorsCount,
+                AcceptedDonorsCount = r.AcceptedDonorsCount,
+                CreatedAt = r.CreatedAt,
+                CompletedAt = r.CompletedAt
+            }).ToList();
 
             return (true, "Requests retrieved successfully", new RequestListResponseDto
             {

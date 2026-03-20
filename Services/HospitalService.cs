@@ -618,8 +618,9 @@ public class HospitalService : IHospitalService
             if (hospital == null)
                 return (false, "Hospital profile not found", null);
 
+            var hospitalCity = hospital.City.Trim().ToLower();
             var offers = await _context.DonorOffers
-                .Where(o => o.City == hospital.City && o.Status == DonorOfferStatus.Available)
+                .Where(o => o.City.Trim().ToLower() == hospitalCity && o.Status == DonorOfferStatus.Available)
                 .Include(o => o.Donor)
                     .ThenInclude(d => d.User)
                 .OrderByDescending(o => o.CreatedAt)
