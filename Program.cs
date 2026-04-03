@@ -88,7 +88,23 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // Configure CORS
-var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+var defaultAllowedOrigins = new[]
+{
+    "https://sharedlife.me",
+    "https://www.sharedlife.me",
+    "https://sharedlife-virid.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173"
+};
+
+var configuredAllowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+var allowedOrigins = configuredAllowedOrigins
+    .Concat(defaultAllowedOrigins)
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Select(origin => origin.Trim().TrimEnd('/'))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
