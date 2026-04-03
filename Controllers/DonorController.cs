@@ -228,9 +228,11 @@ public class DonorController : ControllerBase
     /// Upload a verification document (ID, medical report, etc.)
     /// </summary>
     [HttpPost("document")]
+    [Consumes("multipart/form-data")]
     [Authorize(Roles = "Donor")]
-    public async Task<ActionResult<ApiResponse<object>>> UploadDocument([FromForm] IFormFile file)
+    public async Task<ActionResult<ApiResponse<object>>> UploadDocument([FromForm] DonorDocumentUploadDto request)
     {
+        var file = request.File;
         if (file == null || file.Length == 0)
             return BadRequest(ApiResponse<object>.ErrorResponse("No file provided"));
 
