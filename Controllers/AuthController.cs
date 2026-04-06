@@ -35,14 +35,14 @@ public class AuthController : ControllerBase
                 .Select(e => e.ErrorMessage)
                 .ToList();
             
-            return BadRequest(ApiResponse<LoginResponseDto>.ErrorResponse("Validation failed", errors));
+            return Ok(ApiResponse<LoginResponseDto>.ErrorResponse("Validation failed", errors));
         }
 
         var (success, message, data) = await _authService.RegisterAsync(request);
 
         if (!success)
         {
-            return BadRequest(ApiResponse<LoginResponseDto>.ErrorResponse(message));
+            return Ok(ApiResponse<LoginResponseDto>.ErrorResponse(message));
         }
 
         // Hospital registration returns success but no login data (pending approval)
@@ -147,8 +147,18 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public async Task<IActionResult> CheckEmail([FromQuery] string email)
     {
-        var exists = await _authService.EmailExistsAsync(email);
-        return Ok(new { exists });
+        try
+        {
+            var exists = await _authService.EmailExistsAsync(email);
+            return Ok(new { exists });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking email availability for {Email}", email);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ApiResponse<object>.ErrorResponse("Unable to check email availability right now"));
+        }
     }
 }
 

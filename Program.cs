@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SharedLife.Data;
+using SharedLife.Models.Responses;
 using SharedLife.Services;
 using SharedLife.Services.Interfaces;
 using SharedLife.Utilities;
@@ -57,9 +58,11 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Configure MySQL Database
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = ResolveMySqlConnectionString(builder.Configuration);
+var mySqlServerVersion = ResolveMySqlServerVersion(builder.Configuration);
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseMySql(connectionString, new MySqlServerVersion(mySqlServerVersion)));
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -88,22 +91,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // Configure CORS
-var defaultAllowedOrigins = new[]
-{
-    "https://sharedlife.me",
-    "https://www.sharedlife.me",
-    "https://sharedlife-virid.vercel.app",
-    "http://localhost:3000",
-    "http://localhost:5173"
-};
-
-var configuredAllowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-var allowedOrigins = configuredAllowedOrigins
-    .Concat(defaultAllowedOrigins)
-    .Where(origin => !string.IsNullOrWhiteSpace(origin))
-    .Select(origin => origin.Trim().TrimEnd('/'))
-    .Distinct(StringComparer.OrdinalIgnoreCase)
-    .ToArray();
+var allowedOrigins = ResolveAllowedOrigins(builder.Configuration, builder.Environment);
 
 builder.Services.AddCors(options =>
 {
@@ -127,6 +115,10 @@ builder.Services.AddScoped<IChatService, ChatService>();
 
 var app = builder.Build();
 
+var startupLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+startupLogger.LogInformation("Using MySQL server version {Version}", mySqlServerVersion);
+startupLogger.LogInformation("CORS allowed origins: {Origins}", string.Join(", ", allowedOrigins));
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
@@ -140,6 +132,28 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("GlobalException");
+        logger.LogError(ex, "Unhandled exception for {Method} {Path}", context.Request.Method, context.Request.Path);
+
+        if (context.Response.HasStarted)
+        {
+            throw;
+        }
+
+        context.Response.Clear();
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(ApiResponse<object>.ErrorResponse("An internal server error occurred."));
+    }
+});
 
 // Serve uploaded documents
 var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
@@ -156,25 +170,107 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Auto-migrate database in development
-if (app.Environment.IsDevelopment())
+// Apply migrations and seed admin user on startup
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseInitialization");
     try
     {
-        context.Database.EnsureCreated();
-        Console.WriteLine("Database connected and ensured created.");
-        
-        // Seed admin user
         await DbInitializer.InitializeAsync(app.Services);
-        Console.WriteLine("Database seeding completed.");
+        logger.LogInformation("Database initialization completed.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database connection failed: {ex.Message}");
-        Console.WriteLine("Make sure MySQL is running and connection string is correct.");
+        logger.LogError(ex, "Database initialization failed. Authentication endpoints may fail until database connectivity is restored.");
     }
 }
 
 await app.RunAsync();
+
+static string ResolveMySqlConnectionString(IConfiguration configuration)
+{
+    var configuredConnection = configuration.GetConnectionString("DefaultConnection");
+    var host = configuration["MYSQLHOST"];
+    var port = configuration["MYSQLPORT"];
+    var database = configuration["MYSQLDATABASE"];
+    var user = configuration["MYSQLUSER"];
+    var password = configuration["MYSQLPASSWORD"];
+
+    var hasRailwayMySqlVars =
+        !string.IsNullOrWhiteSpace(host) &&
+        !string.IsNullOrWhiteSpace(port) &&
+        !string.IsNullOrWhiteSpace(database) &&
+        !string.IsNullOrWhiteSpace(user);
+
+    if (hasRailwayMySqlVars)
+    {
+        return $"Server={host};Port={port};Database={database};User={user};Password={password};SslMode=Preferred;";
+    }
+
+    if (!string.IsNullOrWhiteSpace(configuredConnection))
+    {
+        return configuredConnection;
+    }
+
+    throw new InvalidOperationException("No MySQL connection string configured. Set ConnectionStrings__DefaultConnection or Railway MYSQL* environment variables.");
+}
+
+static Version ResolveMySqlServerVersion(IConfiguration configuration)
+{
+    var configuredVersion = configuration["MySql:ServerVersion"];
+    if (Version.TryParse(configuredVersion, out var parsed))
+    {
+        return parsed;
+    }
+
+    return new Version(8, 0, 36);
+}
+
+static string[] ResolveAllowedOrigins(IConfiguration configuration, IWebHostEnvironment environment)
+{
+    var defaultProductionOrigins = new[]
+    {
+        "https://sharedlife.me",
+        "https://www.sharedlife.me",
+        "https://sharedlife-virid.vercel.app"
+    };
+
+    var defaultDevelopmentOrigins = new[]
+    {
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:5173",
+        "http://localhost:5014"
+    };
+
+    var configuredAllowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+    // Railway/hosted platforms commonly provide comma-separated env vars.
+    var envAllowedOriginsRaw =
+        Environment.GetEnvironmentVariable("AllowedOrigins") ??
+        Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ??
+        string.Empty;
+
+    var envAllowedOrigins = envAllowedOriginsRaw
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    var defaults = environment.IsDevelopment()
+        ? defaultProductionOrigins.Concat(defaultDevelopmentOrigins)
+        : defaultProductionOrigins;
+
+    var allowedOrigins = configuredAllowedOrigins
+        .Concat(envAllowedOrigins)
+        .Concat(defaults)
+        .Where(origin => !string.IsNullOrWhiteSpace(origin))
+        .Select(origin => origin.Trim().TrimEnd('/'))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    if (allowedOrigins.Length == 0)
+    {
+        throw new InvalidOperationException("No CORS origins configured. Set AllowedOrigins in configuration or ALLOWED_ORIGINS in environment.");
+    }
+
+    return allowedOrigins;
+}
