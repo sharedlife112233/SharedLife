@@ -14,6 +14,7 @@ public class MatchingDonorDto
     public string StatusDisplay { get; set; } = string.Empty;
     
     // Donation preferences (for privacy, only show relevant info)
+    public bool WillingToDonateBlood { get; set; }
     public bool WillingToDonatePlasma { get; set; }
     public bool WillingToDonatePlatelets { get; set; }
     public bool WillingToDonateOrgan { get; set; }

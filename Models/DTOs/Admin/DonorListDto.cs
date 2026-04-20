@@ -14,6 +14,7 @@ public class DonorListDto
     public bool IsVerified { get; set; }
     public int TotalBloodDonations { get; set; }
     public DateTime? LastBloodDonationDate { get; set; }
+    public bool WillingToDonateBlood { get; set; }
     public bool WillingToDonatePlasma { get; set; }
     public bool WillingToDonatePlatelets { get; set; }
     public bool WillingToDonateOrgan { get; set; }

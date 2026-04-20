@@ -51,6 +51,7 @@ public class DonorService : IDonorService
                 BloodGroup = request.BloodGroup,
                 Weight = request.Weight,
                 Height = request.Height,
+                WillingToDonateBlood = request.WillingToDonateBlood,
                 WillingToDonatePlasma = request.WillingToDonatePlasma,
                 WillingToDonatePlatelets = request.WillingToDonatePlatelets,
                 WillingToDonateOrgan = request.WillingToDonateOrgan,
@@ -156,6 +157,7 @@ public class DonorService : IDonorService
             // Update donor fields
             donor.Weight = request.Weight;
             donor.Height = request.Height;
+            donor.WillingToDonateBlood = request.WillingToDonateBlood;
             donor.WillingToDonatePlasma = request.WillingToDonatePlasma;
             donor.WillingToDonatePlatelets = request.WillingToDonatePlatelets;
             donor.WillingToDonateOrgan = request.WillingToDonateOrgan;
@@ -318,6 +320,7 @@ public class DonorService : IDonorService
             BloodGroupDisplay = GetBloodGroupDisplay(donor.BloodGroup),
             Weight = donor.Weight,
             Height = donor.Height,
+            WillingToDonateBlood = donor.WillingToDonateBlood,
             WillingToDonatePlasma = donor.WillingToDonatePlasma,
             WillingToDonatePlatelets = donor.WillingToDonatePlatelets,
             WillingToDonateOrgan = donor.WillingToDonateOrgan,

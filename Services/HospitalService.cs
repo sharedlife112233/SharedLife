@@ -582,6 +582,7 @@ public class HospitalService : IHospitalService
             BloodGroup = donor.BloodGroup.ToString(),
             Weight = donor.Weight,
             Height = donor.Height,
+            WillingToDonateBlood = donor.WillingToDonateBlood,
             WillingToDonatePlasma = donor.WillingToDonatePlasma,
             WillingToDonatePlatelets = donor.WillingToDonatePlatelets,
             WillingToDonateOrgan = donor.WillingToDonateOrgan,

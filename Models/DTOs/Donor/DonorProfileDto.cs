@@ -21,6 +21,7 @@ public class DonorProfileDto
     public double? Height { get; set; }
     
     // Donation Preferences
+    public bool WillingToDonateBlood { get; set; }
     public bool WillingToDonatePlasma { get; set; }
     public bool WillingToDonatePlatelets { get; set; }
     public bool WillingToDonateOrgan { get; set; }

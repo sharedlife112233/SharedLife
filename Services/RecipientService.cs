@@ -374,6 +374,7 @@ public class RecipientService : IRecipientService
                 IsAvailable = d.IsAvailable,
                 Status = d.Status,
                 StatusDisplay = d.Status.ToString(),
+                WillingToDonateBlood = d.WillingToDonateBlood,
                 WillingToDonatePlasma = d.WillingToDonatePlasma,
                 WillingToDonatePlatelets = d.WillingToDonatePlatelets,
                 WillingToDonateOrgan = d.WillingToDonateOrgan,
